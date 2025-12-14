@@ -187,6 +187,113 @@ class _ScreenTwoState extends State<ScreenTwo> {
   );
 }
 
+  Future<void> _selectPrefecture() async {
+    final prefectures = [
+      '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
+      '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
+      '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県',
+      '岐阜県', '静岡県', '愛知県', '三重県',
+      '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県',
+      '鳥取県', '島根県', '岡山県', '広島県', '山口県',
+      '徳島県', '香川県', '愛媛県', '高知県',
+      '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
+    ];
+
+    int initialIndex = 0;
+    if (_birthplaceController.text.isNotEmpty) {
+      final index = prefectures.indexOf(_birthplaceController.text);
+      if (index != -1) {
+        initialIndex = index;
+      }
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        int tempIndex = initialIndex;
+        
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Container(
+              height: 300,
+              color: Colors.white,
+              child: Column(
+                children: [
+                  // ヘッダー
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('キャンセル'),
+                        ),
+                        const Text(
+                          '出身地を選択',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _birthplaceController.text = prefectures[tempIndex];
+                            });
+                            Navigator.pop(context);
+                          },
+                          child: const Text('完了'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  // ピッカー
+                  Expanded(
+                    child: Center(
+                      child: SizedBox(
+                        width: 200,
+                        height: 150,
+                        child: ListWheelScrollView.useDelegate(
+                          itemExtent: 50,
+                          perspective: 0.005,
+                          diameterRatio: 1.2,
+                          physics: const FixedExtentScrollPhysics(),
+                          onSelectedItemChanged: (index) {
+                            setModalState(() {
+                              tempIndex = index;
+                            });
+                          },
+                          childDelegate: ListWheelChildBuilderDelegate(
+                            builder: (context, index) {
+                              bool isSelected = index == tempIndex;
+                              return Center(
+                                child: Text(
+                                  prefectures[index],
+                                  style: TextStyle(
+                                    fontSize: isSelected ? 24 : 18,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    color: isSelected ? Colors.black : Colors.grey,
+                                  ),
+                                ),
+                              );
+                            },
+                            childCount: prefectures.length,
+                          ),
+                          controller: FixedExtentScrollController(
+                            initialItem: tempIndex,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _saveProfile() async {
     if (_formKey.currentState!.validate()) {
       try {
@@ -246,202 +353,245 @@ class _ScreenTwoState extends State<ScreenTwo> {
     return Scaffold(
       backgroundColor: Colors.lightBlue[50],
       appBar: AppBar(
-        title: const Text('プロフィール編集'),
+        title: const Text('プロフィール編集', style: TextStyle(fontSize: 24)),
         backgroundColor: Colors.blue[300],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // プロフィール写真エリア
-            Container(
-              height: 120,
-              width: double.infinity,
-              color: Colors.blue[200],
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Colors.white,
-                    child: const Icon(Icons.person, size: 40, color: Colors.grey),
-                  ),
-                  Positioned(
-                    bottom: 20,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        '写真を変更',
-                        style: TextStyle(color: Colors.white, fontSize: 10),
-                      ),
-                    ),
-                  ),
-                ],
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ニックネーム（横一杯）
+              const Text(
+                'ニックネーム',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
-            ),
-            // フォームエリア
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _nicknameController,
+                style: const TextStyle(fontSize: 28),
+                decoration: InputDecoration(
+                  hintText: 'ニックネームを入力',
+                  hintStyle: const TextStyle(fontSize: 28),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'ニックネームを入力してください';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              
+              // 下部：2列レイアウト
+              Expanded(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ニックネーム
-                    const Text(
-                      'ニックネーム',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    TextFormField(
-                      controller: _nicknameController,
-                      decoration: InputDecoration(
-                        hintText: 'ニックネームを入力',
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'ニックネームを入力してください';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    // 誕生日
-                    const Text(
-                      '誕生日',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    TextFormField(
-                      controller: _birthdayController,
-                      readOnly: true,
-                      decoration: InputDecoration(
-                        hintText: '誕生日を選択',
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        suffixIcon: const Icon(Icons.calendar_today, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onTap: _selectDate,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return '誕生日を選択してください';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    // 出身地
-                    const Text(
-                      '出身地',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    TextFormField(
-                      controller: _birthplaceController,
-                      decoration: InputDecoration(
-                        hintText: '出身地を入力',
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return '出身地を入力してください';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    // トリビアの写真
-                    const Text(
-                      'トリビアの写真',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      height: 100,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey),
-                      ),
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                    // 左列：写真2つ
+                    SingleChildScrollView(
+                      child: Column(
                         children: [
-                          Icon(Icons.add_photo_alternate, size: 30, color: Colors.grey),
-                          SizedBox(height: 4),
-                          Text('写真を追加', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                          // プロフィール写真
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'プロフィール写真',
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                width: 340,
+                                height: 340,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.grey, width: 2),
+                                ),
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    const Icon(Icons.person, size: 120, color: Colors.grey),
+                                    Positioned(
+                                      bottom: 16,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black54,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Text(
+                                          '写真を変更',
+                                          style: TextStyle(color: Colors.white, fontSize: 20),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          // トリビアの写真
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'トリビアの写真',
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                width: 340,
+                                height: 340,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.grey, width: 2),
+                                ),
+                                child: const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_photo_alternate, size: 110, color: Colors.grey),
+                                    SizedBox(height: 16),
+                                    Text('写真を追加', style: TextStyle(color: Colors.grey, fontSize: 22)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(width: 20),
                     
-                    // トリビアの文章
-                    const Text(
-                      'トリビア',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    TextFormField(
-                      controller: _triviaController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        hintText: 'あなたのトリビアを入力',
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'トリビアを入力してください';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // 保存ボタン
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: _saveProfile,
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(200, 45),
-                          backgroundColor: Colors.blue[300],
-                        ),
-                        child: const Text(
-                          '保存',
-                          style: TextStyle(fontSize: 16, color: Colors.white),
-                        ),
+                    // 右列：誕生日・出身地・トリビア・保存ボタン
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 誕生日
+                          const Text(
+                            '誕生日',
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _birthdayController,
+                            readOnly: true,
+                            style: const TextStyle(fontSize: 22),
+                            decoration: InputDecoration(
+                              hintText: '誕生日を選択',
+                              hintStyle: const TextStyle(fontSize: 22),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 42),
+                              suffixIcon: const Icon(Icons.calendar_today, size: 28),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onTap: _selectDate,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return '誕生日を選択してください';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // 出身地
+                          const Text(
+                            '出身地',
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _birthplaceController,
+                            readOnly: true,
+                            style: const TextStyle(fontSize: 22),
+                            decoration: InputDecoration(
+                              hintText: '出身地を選択',
+                              hintStyle: const TextStyle(fontSize: 22),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 42),
+                              suffixIcon: const Icon(Icons.location_on, size: 28),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onTap: _selectPrefecture,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return '出身地を選択してください';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // トリビアテキスト
+                          const Text(
+                            'トリビア',
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _triviaController,
+                            maxLines: 9,
+                            style: const TextStyle(fontSize: 20),
+                            decoration: InputDecoration(
+                              hintText: 'あなたのトリビアを入力',
+                              hintStyle: const TextStyle(fontSize: 20),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 42),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'トリビアを入力してください';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              
+              // 保存ボタン（画面中央）
+              Center(
+                child: ElevatedButton(
+                  onPressed: _saveProfile,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(250, 55),
+                    backgroundColor: Colors.blue[300],
+                  ),
+                  child: const Text(
+                    '保存',
+                    style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
