@@ -50,4 +50,4 @@ def henerateImagefromtrivia(trivia):
 
 
 if __name__ == "__main__":
-    henerateImagefromtrivia("水筒の茶渋取りには卵の殻が効果的")
+    henerateImagefromtrivia("タコの心臓は３つある")
