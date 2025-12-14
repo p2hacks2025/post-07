@@ -32,12 +32,22 @@ def search(trivia, judgetext):
     # ]
 
 
-
     positive = 0
+
+    negative_keywords = [
+        "誤り",
+        "間違い",
+        "デマ",
+        "都市伝説",
+        "正しくない",
+        "ではない"
+    ]
 
     for t in judgetext:
         if judgetext in t:
             positive += 1
+
+    
 
     if positive >= 2:
         return {
@@ -60,7 +70,7 @@ if __name__ == "__main__":
     # result = judge_trivia(trivia, texts)
 
     output = {
-        # "trivia": trivia,
+        "trivia": trivia,
         # **result
     }
 
