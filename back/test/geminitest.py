@@ -1,22 +1,18 @@
 import os
+from dotenv import load_dotenv
 import google.generativeai as genai
 
 def main():
-    # 環境変数から APIキーを読む
-    api_key = os.environ.get("GEMINI_API_KEY")
+    load_dotenv()  # ← これが重要
+
+    api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise RuntimeError("GEMINI_API_KEY が設定されていません")
+        raise RuntimeError("GEMINI_API_KEY is not set")
 
     genai.configure(api_key=api_key)
 
-    # 無料枠で確実に使えるモデル
     model = genai.GenerativeModel("models/gemini-2.5-flash")
-
-    response = model.generate_content(
-        "日本語で20文字以内の自己紹介をしてください"
-    )
-
-    print("=== Gemini response ===")
+    response = model.generate_content("日本語で自己紹介してください")
     print(response.text)
 
 if __name__ == "__main__":
