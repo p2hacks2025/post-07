@@ -217,7 +217,7 @@ class _ScreenTwoState extends State<ScreenTwo> {
         ),
       ),
       appBar: AppBar(
-        title: const Text('全国すれ違い図鑑'),
+        title: const Text('全国トリビア図鑑'),
         backgroundColor: Colors.orange,
         centerTitle: true,
         leading: Builder(
