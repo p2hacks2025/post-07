@@ -158,7 +158,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/  # Commented out to allow Flutter lib/ directories
 lib64/
 parts/
 sdist/
