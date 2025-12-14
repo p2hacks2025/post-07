@@ -33,10 +33,10 @@ def trivia_trueorfalse(trivia: str):
     print("LLM出力:", text)
 
     if text == "True":
-        print("やった")
+        print("正しい!")
         return True
     if text == "False":
-        print("ちがった")
+        print("違った!")
         return False
 
     print("判断不能")
