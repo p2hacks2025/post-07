@@ -1,184 +1,162 @@
 import 'package:flutter/material.dart';
+import 'screen_two.dart'; // ★ screen_two.dart を読み込む
 
-class PlazaScreen extends StatefulWidget {
-  const PlazaScreen({super.key});
-
-  @override
-  State<PlazaScreen> createState() => _PlazaScreenState();
+void main() {
+  runApp(const MaterialApp(home: HomeScreen()));
 }
 
-class _PlazaScreenState extends State<PlazaScreen> {
-  // 選択中のページ番号
-  int _selectedIndex = 0;
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
-  // メニューをスライドさせるためのコントローラー
-  // viewportFraction: 0.25 にすることで、画面に4〜5個のアイコンを同時に見せます
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0; // 現在真ん中にあるアイコンの番号
   late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
-    // 真ん中に初期ページが来るように設定
-    _pageController = PageController(initialPage: _selectedIndex, viewportFraction: 0.25);
+    _pageController = PageController(initialPage: _selectedIndex, viewportFraction: 0.1);
   }
 
-  // ■画面データのリスト
+  // メニューのデータ
   final List<Map<String, dynamic>> _screens = [
-    {
-      'title': 'ホーム',
-      'icon': Icons.home_rounded,
-      'color': Colors.green.shade600,
-      'content': 'いつもの場所',
-    },
-    {
-      'title': 'マイプロフィール',
-      'icon': Icons.person_rounded,
-      'color': Colors.blue.shade400,
-      'content': 'あなたの情報',
-    },
-    {
-      'title': '出身地埋め',
-      'icon': Icons.map_rounded,
-      'color': Colors.orange.shade400,
-      'content': '日本地図を埋めよう',
-    },
-    {
-      'title': '誕生日埋め',
-      'icon': Icons.cake_rounded,
-      'color': Colors.pink.shade400,
-      'content': '祝ってあげよう',
-    },
-    {
-      'title': '広場',
-      'icon': Icons.people_alt_rounded,
-      'color': Colors.teal.shade400,
-      'content': 'みんなが集まる場所',
-    },
-    {
-      'title': 'トロフィー',
-      'icon': Icons.emoji_events_rounded,
-      'color': Colors.amber.shade600,
-      'content': '実績解除！',
-    },
+    {'title': 'ホーム', 'icon': Icons.home_rounded, 'color': Colors.green.shade600},
+    {'title': 'マイプロフィール', 'icon': Icons.person_rounded, 'color': Colors.blue.shade400},
+    {'title': '出身地埋め', 'icon': Icons.map_rounded, 'color': Colors.orange.shade400}, // index: 2
+    {'title': '誕生日埋め', 'icon': Icons.cake_rounded, 'color': Colors.pink.shade400},
+    {'title': '広場', 'icon': Icons.people_alt_rounded, 'color': Colors.teal.shade400},
+    {'title': 'トロフィー', 'icon': Icons.emoji_events_rounded, 'color': Colors.amber.shade600},
   ];
+
+  // アイコンをタップしたときの処理
+  void _onIconTapped(int index) {
+    // 真ん中のアイコン（選択中）をタップしたときだけ遷移などのアクション
+    if (index == _selectedIndex) {
+      
+      if (index == 2) {
+        // 地図画面へ遷移
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ScreenTwo()),
+        );
+      } else if (index == 0) {
+        // ホームボタンを押したとき（特に何もしないか、更新など）
+        ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(content: Text('ここがホームです')),
+        );
+      } else {
+        // その他のボタン（準備中）
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${_screens[index]['title']} は準備中です')),
+        );
+      }
+      
+    } else {
+      // 端のアイコンをタップしたら、真ん中に持ってくる
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // ■背景：すれちがい広場っぽい緑色
-      backgroundColor: const Color(0xFF8BC34A), // 明るいライトグリーン
-
-      // ■メインコンテンツエリア（上の広い部分）
-      body: Column(
+      backgroundColor: Colors.white, // ベースの色
+      body: Stack(
         children: [
-          Expanded(
+          // ===================================================
+          // 1. メイン画面（ここを固定にする！）
+          // ===================================================
+          Positioned.fill(
             child: Container(
-              width: double.infinity,
-              margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              decoration: BoxDecoration(
-                // 画面ごとに少し色を変えたカードを表示
-                color: _screens[_selectedIndex]['color'],
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
+              color: Colors.green.shade600, // ホーム画面の背景色（固定）
+              child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // 画面タイトル
+                  // 常に「ホーム」の内容を表示
                   Text(
-                    _screens[_selectedIndex]['title'],
-                    style: const TextStyle(
+                    'ホーム',
+                    style: TextStyle(
                       fontSize: 40,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                       shadows: [Shadow(blurRadius: 10, color: Colors.black45)],
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  // アイコン
+                  SizedBox(height: 20),
                   Icon(
-                    _screens[_selectedIndex]['icon'],
+                    Icons.home_rounded,
                     size: 80,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white,
                   ),
-                  const SizedBox(height: 20),
-                  // 説明文
+                  SizedBox(height: 20),
                   Text(
-                    _screens[_selectedIndex]['content'],
-                    style: const TextStyle(fontSize: 20, color: Colors.white),
+                    'いつもの場所',
+                    style: TextStyle(fontSize: 20, color: Colors.white),
                   ),
+                  SizedBox(height: 100), // アイコンとかぶらないための余白
                 ],
               ),
             ),
           ),
 
-          // ■下のスライド式メニューエリア
-          Container(
-            height: 140, // メニューの高さ
-            decoration: const BoxDecoration(
-              color: Color(0xFF689F38), // 少し濃い緑で地面っぽく
-            ),
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: _screens.length,
-              onPageChanged: (index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
-              // アイコンの構築
-              itemBuilder: (context, index) {
-                // 真ん中（選択中）かどうか判定
-                final bool isSelected = index == _selectedIndex;
-                
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOutQuint,
-                  margin: EdgeInsets.only(
-                    top: isSelected ? 10 : 30, // 選択中は上に浮き上がる
-                    bottom: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isSelected ? Colors.white : Colors.white.withOpacity(0.3),
-                    boxShadow: isSelected
-                        ? [
-                            const BoxShadow(
-                                color: Colors.black26, blurRadius: 10, spreadRadius: 1)
-                          ]
-                        : [],
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _screens[index]['icon'],
-                        size: isSelected ? 40 : 25, // 選択中は大きく
-                        color: isSelected ? const Color(0xFF689F38) : Colors.white,
+          // ===================================================
+          // 2. 下のメニューアイコン（ここはスライドで動く）
+          // ===================================================
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              height: 120,
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: _screens.length,
+                physics: const BouncingScrollPhysics(),
+                onPageChanged: (index) {
+                  setState(() {
+                    _selectedIndex = index; // 真ん中の番号だけ更新（画面は変えない）
+                  });
+                },
+                itemBuilder: (context, index) {
+                  final bool isSelected = index == _selectedIndex;
+
+                  // アイコン部分のデザイン
+                  return GestureDetector(
+                    onTap: () => _onIconTapped(index),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                      // 真ん中に来たら上に上がり、大きくなる
+                      margin: EdgeInsets.only(
+                        top: isSelected ? 30 : 50,    // 選択中は上に上がる
+                        bottom: isSelected ? 20 : 5,
                       ),
-                      if (isSelected) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          _screens[index]['title'],
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF689F38),
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        // 選択中は少し光らせる演出（お好みで）
+                        boxShadow: isSelected ? [
+                          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 5))
+                        ] : [],
+                      ),
+                      child: Center(
+                        child: Icon(
+                          _screens[index]['icon'],
+                          // 選択中はサイズ50、それ以外は30
+                          size: isSelected ? 50 : 30,
+                          // 選択中は白くハッキリ、それ以外は半透明
+                          color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
                         ),
-                      ]
-                    ],
-                  ),
-                );
-              },
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ],
