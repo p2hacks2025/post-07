@@ -14,7 +14,7 @@ def main():
     genai.configure(api_key=api_key)
 
     model = genai.GenerativeModel("models/gemini-2.5-flash")
-    response = model.generate_content("日本語で自己紹介してください")
+    response = model.generate_content("ティラノサウルスの先祖はダチョウとワニと同じというのは本当ですか")
     print(response.text)
 
 if __name__ == "__main__":
