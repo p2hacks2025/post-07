@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'screen_one.dart';
 import 'screen_two.dart';
 import 'screen_three.dart';
+import 'screen_ten.dart';
+import 'screen_eleven.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -59,6 +61,32 @@ class HomeScreen extends StatelessWidget {
                 minimumSize: const Size(200, 50),
               ),
               child: const Text('画面3へ'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ScreenTen()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(200, 50),
+              ),
+              child: const Text('画面10へ'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ScreenEleven()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(200, 50),
+              ),
+              child: const Text('画面11へ'),
             ),
           ],
         ),
