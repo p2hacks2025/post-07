@@ -298,7 +298,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
     if (_formKey.currentState!.validate()) {
       try {
         // APIのエンドポイントURL（ご自身のサーバーURLに変更してください）
-        final url = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/');
+        final url = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/save_profile');
         
         // 送信するデータ
         final data = {
