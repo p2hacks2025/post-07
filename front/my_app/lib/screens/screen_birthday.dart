@@ -9,82 +9,105 @@ class ScreenThree extends StatefulWidget {
 }
 
 class _ScreenThreeState extends State<ScreenThree> {
-  // メニューの初期位置（誕生日画面は index: 3）
-  int _selectedIndex = 3; 
-  late PageController _pageController;
-  
-  // カレンダーの表示月（初期値は現在の月）
-  DateTime _currentMonth = DateTime.now();
+  // ■ メニュー用コントローラー
+  final int _initialMenuIndex = 3; // 誕生日画面は3番目
+  late PageController _menuPageController;
+  int _selectedMenuIndex = 3;
 
-  // 獲得した誕生日を保存するセット (形式: "MM-DD")
+  // ■ カレンダー用コントローラー
+  // 月を無限にスワイプできるように、初期位置を大きな数字（真ん中）に設定します
+  final int _initialCalendarPage = 1000;
+  late PageController _calendarPageController;
+  late DateTime _baseMonth; // 基準となる月（現在）
+  DateTime _currentDisplayMonth = DateTime.now(); // 今表示している月
+
+  // 獲得した誕生日リスト
   final Set<String> _collectedBirthdays = {};
 
   // メニューデータ
   final List<Map<String, dynamic>> _screens = [
-    {'title': 'ホーム', 'icon': Icons.home_rounded, 'route': '/home'},
-    {'title': 'マイプロフィール', 'icon': Icons.person_rounded, 'route': '/profile'},
-    {'title': '出身地埋め', 'icon': Icons.map_rounded, 'route': '/map'}, 
-    {'title': '誕生日埋め', 'icon': Icons.cake_rounded, 'route': '/birthday'}, // 現在地
-    {'title': '広場', 'icon': Icons.people_alt_rounded, 'route': '/square'},
-    {'title': 'トロフィー', 'icon': Icons.emoji_events_rounded, 'route': '/trophy'},
+    {'title': 'ホーム', 'icon': Icons.home_rounded},
+    {'title': 'マイプロフィール', 'icon': Icons.person_rounded},
+    {'title': '出身地埋め', 'icon': Icons.map_rounded}, 
+    {'title': '誕生日埋め', 'icon': Icons.cake_rounded}, 
+    {'title': '広場', 'icon': Icons.people_alt_rounded},
+    {'title': 'トロフィー', 'icon': Icons.emoji_events_rounded},
   ];
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: _selectedIndex, viewportFraction: 0.2);
+    // メニューのコントローラー初期化
+    _menuPageController = PageController(initialPage: _initialMenuIndex, viewportFraction: 0.2);
+    
+    // カレンダーのコントローラー初期化
+    _calendarPageController = PageController(initialPage: _initialCalendarPage);
+    _baseMonth = DateTime.now(); // 今月を基準にする
+    _currentDisplayMonth = _baseMonth;
   }
 
-  // メニュータップ時の処理
-  void _onMenuTap(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    _pageController.animateToPage(
-      index, 
-      duration: const Duration(milliseconds: 300), 
-      curve: Curves.easeOut
-    );
+  @override
+  void dispose() {
+    _menuPageController.dispose();
+    _calendarPageController.dispose();
+    super.dispose();
+  }
 
-    if (index == 0) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    } else if (index == 3) {
-      // 現在の画面
+  // メニューアイコンをタップしたときの処理
+  void _onMenuTap(int index) {
+    if (index == _selectedMenuIndex) {
+      // 既に選択されているアイコンをタップした場合の処理
+      if (index == 0) {
+        // ホームへ戻る
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+      // 他の画面への遷移は必要に応じて記述
     } else {
-      // 地図画面へ戻る場合などの処理が必要ならここに追加
-      // 今回は簡易的にスナックバー表示
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${_screens[index]['title']} 画面へ移動します'),
-          duration: const Duration(milliseconds: 500),
-        ),
+      // ■ 修正点: 選択されていないアイコンをタップしたら、アニメーションで真ん中に持ってくる
+      _menuPageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
       );
+      setState(() {
+        _selectedMenuIndex = index;
+      });
     }
   }
 
-  // 誕生日すれ違いシミュレーション
+  // カレンダーの月移動（矢印ボタン用）
+  void _moveMonth(int offset) {
+    _calendarPageController.animateToPage(
+      _calendarPageController.page!.toInt() + offset,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  // ページ変更時に月情報を更新
+  void _onCalendarPageChanged(int pageIndex) {
+    setState(() {
+      // 基準月からの差分を計算して、表示月を更新
+      final monthDiff = pageIndex - _initialCalendarPage;
+      _currentDisplayMonth = DateTime(_baseMonth.year, _baseMonth.month + monthDiff, 1);
+    });
+  }
+
+  // 誕生日ゲットシミュレーション
   void _simulateStreetPass() {
     final random = Random();
-    // ランダムな月(1-12)と日(1-31)を生成
-    // ※本来は各月の日数を厳密に計算すべきですが、簡易的に生成して無効な日付は無視などの処理をします
-    // ここではDateTimeを使って実在する日付を生成します
     final randomMonth = random.nextInt(12) + 1;
-    final randomDay = random.nextInt(31) + 1;
+    final randomDay = random.nextInt(28) + 1;
     
-    // 日付の妥当性チェック（例: 2月30日などは除外）
-    final date = DateTime(2024, randomMonth, randomDay); // 2024年はうるう年なので2/29も出る
-    if (date.month != randomMonth) return; // 月が変わっていたら無効な日付（例: 4/31 -> 5/1）なので無視
-
+    final date = DateTime(2024, randomMonth, randomDay); 
     final key = "${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
     setState(() {
       _collectedBirthdays.add(key);
     });
 
-    // カレンダーの表示月を獲得した月にする（演出）
-    setState(() {
-      _currentMonth = DateTime(2024, randomMonth, 1);
-    });
+    // 獲得した月へジャンプするために、その月が現在の基準から何ヶ月離れているか計算
+    // （今回はシンプルに通知だけ出しますが、必要ならjumpToPageも可能です）
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -101,65 +124,44 @@ class _ScreenThreeState extends State<ScreenThree> {
     );
   }
 
-  // 月を移動する
-  void _changeMonth(int offset) {
-    setState(() {
-      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + offset, 1);
-    });
-  }
-
-  // カレンダーの日付セルを作成
+  // 1日分のセルを作成
   Widget _buildDateCell(int day, int month) {
-    if (day == 0) return const SizedBox(); // 空白セル
-
     final key = "${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}";
     final isCollected = _collectedBirthdays.contains(key);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 500),
-      margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        // 獲得済みならピンクで光らせる
-        color: isCollected ? Colors.pink.shade400 : Colors.white.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(8),
+        color: isCollected ? Colors.pink.shade400 : Colors.white.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(8), // 少し角丸を戻しました
         border: Border.all(
-          color: isCollected ? Colors.pinkAccent : Colors.grey.shade300,
+          color: isCollected ? Colors.pinkAccent : Colors.pink.shade100,
           width: isCollected ? 2 : 1
         ),
         boxShadow: isCollected 
-          ? [
-              BoxShadow(
-                color: Colors.pinkAccent.withOpacity(0.6),
-                blurRadius: 10,
-                spreadRadius: 2,
-              )
-            ] 
+          ? [BoxShadow(color: Colors.pinkAccent.withOpacity(0.6), blurRadius: 6, spreadRadius: 1)] 
           : [],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            if (isCollected) {
-               showDialog(
-                context: context,
-                builder: (_) => AlertDialog(
-                  title: Text('$month月$day日'),
-                  content: const Text('この誕生日の人とすれ違いました！\nお祝いしましょう！🎉'),
-                  actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('閉じる'))],
-                ),
-              );
-            }
-          },
-          borderRadius: BorderRadius.circular(8),
-          child: Center(
-            child: Text(
-              '$day',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isCollected ? Colors.white : Colors.grey.shade600,
-                fontSize: 16,
+      child: InkWell(
+        onTap: () {
+          if (isCollected) {
+            showDialog(
+              context: context,
+              builder: (_) => AlertDialog(
+                title: Text('$month月$day日'),
+                content: const Text('獲得済みです！'),
+                actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('閉じる'))],
               ),
+            );
+          }
+        },
+        child: Center(
+          child: Text(
+            '$day',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isCollected ? Colors.white : Colors.grey.shade600,
+              fontSize: 13,
             ),
           ),
         ),
@@ -167,24 +169,40 @@ class _ScreenThreeState extends State<ScreenThree> {
     );
   }
 
+  // 1ヶ月分のグリッドを作成するウィジェット
+  Widget _buildMonthGrid(DateTime monthDate) {
+    final daysInMonth = DateTime(monthDate.year, monthDate.month + 1, 0).day;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 50.0), // 左右の余白
+      child: GridView.builder(
+        physics: const BouncingScrollPhysics(), // カレンダー内はスクロールできるようにしてある
+        // ■ 修正点: アイコンの裏に隠れるように下のパディングを少し確保
+        padding: const EdgeInsets.only(bottom: 80), 
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 7, 
+          // ■ 修正点: 縦長になりすぎないよう 1.1 (少し横長〜正方形) に修正
+          childAspectRatio: 1.1, 
+          // ■ 修正点: 行間を広げて画面全体に配置
+          mainAxisSpacing: 12, 
+          crossAxisSpacing: 8,
+        ),
+        itemCount: daysInMonth,
+        itemBuilder: (context, index) {
+          final day = index + 1;
+          return _buildDateCell(day, monthDate.month);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // カレンダー計算
-    final daysInMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
-    final firstWeekday = DateTime(_currentMonth.year, _currentMonth.month, 1).weekday;
-    // 日曜日始まりにするためのオフセット調整 (DateTimeのweekdayは 月=1 ... 日=7)
-    // カレンダーの左上(日曜)を0とするため、日曜(7)なら0、月曜(1)なら1...とする
-    final offset = (firstWeekday == 7) ? 0 : firstWeekday;
-
-    final totalSlots = daysInMonth + offset;
-
     return Scaffold(
-      backgroundColor: Colors.pink.shade50, // 背景は薄いピンク
-      
-      // デザインを統一したAppBar
+      backgroundColor: Colors.pink.shade50,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: Colors.pink.shade400, // テーマカラー
+        backgroundColor: Colors.pink.shade400,
         centerTitle: true,
         toolbarHeight: 40,
         title: Transform.translate(
@@ -206,136 +224,109 @@ class _ScreenThreeState extends State<ScreenThree> {
 
       body: Stack(
         children: [
-          // ===================================================
-          // 1. メインコンテンツ（カレンダー）
-          // ===================================================
+          // 背景色
           Positioned.fill(
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                
-                // 月切り替えバー
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.pink),
-                        onPressed: () => _changeMonth(-1),
-                      ),
-                      Text(
-                        '${_currentMonth.month}月',
-                        style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.pink.shade800),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.pink),
-                        onPressed: () => _changeMonth(1),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(height: 10),
-
-                // 曜日ヘッダー
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: ['日', '月', '火', '水', '木', '金', '土'].map((day) => 
-                      SizedBox(
-                        width: 40,
-                        child: Center(child: Text(day, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)))
-                      )
-                    ).toList(),
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // カレンダーグリッド
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: GridView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 7, // 1週間は7日
-                        childAspectRatio: 1.0, // 正方形
-                        mainAxisSpacing: 8,
-                        crossAxisSpacing: 8,
-                      ),
-                      itemCount: totalSlots,
-                      itemBuilder: (context, index) {
-                        // オフセットより前は空白
-                        if (index < offset) {
-                          return _buildDateCell(0, _currentMonth.month);
-                        }
-                        // 日付を表示
-                        final day = index - offset + 1;
-                        return _buildDateCell(day, _currentMonth.month);
-                      },
-                    ),
-                  ),
-                ),
-                
-                // 下のメニューとかぶらないように余白
-                const SizedBox(height: 120), 
-              ],
-            ),
+             child: Container(color: Colors.pink.shade50),
           ),
 
-          // ===================================================
-          // 2. 下部メニューバー
-          // ===================================================
+          // メインコンテンツ
+          Column(
+            children: [
+              const SizedBox(height: 5),
+              
+              // 月表示バー
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.pink, size: 24),
+                      onPressed: () => _moveMonth(-1), // 左へスライド
+                    ),
+                    // アニメーション付きで月が変わるように見えるが、今回はシンプルにテキスト更新
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (Widget child, Animation<double> animation) {
+                        return ScaleTransition(scale: animation, child: child);
+                      },
+                      child: Text(
+                        '${_currentDisplayMonth.month}月', 
+                        key: ValueKey<int>(_currentDisplayMonth.month), // Keyを変えるとアニメーションする
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold, 
+                          color: Colors.pink.shade800
+                        )
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.pink, size: 24),
+                      onPressed: () => _moveMonth(1), // 右へスライド
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 10),
+
+              // ■ 修正点: カレンダー部分を PageView に変更してスライド可能に
+              Expanded(
+                child: PageView.builder(
+                  controller: _calendarPageController,
+                  physics: const BouncingScrollPhysics(),
+                  onPageChanged: _onCalendarPageChanged,
+                  // 十分なページ数を確保して無限スクロールっぽく見せる
+                  itemBuilder: (context, index) {
+                    final monthDiff = index - _initialCalendarPage;
+                    final monthDate = DateTime(_baseMonth.year, _baseMonth.month + monthDiff, 1);
+                    return _buildMonthGrid(monthDate);
+                  },
+                ),
+              ),
+            ],
+          ),
+
+          // 下部メニュー (アイコンのみフローティング)
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
               height: 120,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [
-                    Colors.white.withOpacity(0.9), // カレンダーが見やすいように白ベースのグラデ
-                    Colors.white.withOpacity(0.0),
-                  ],
-                ),
-              ),
+              color: Colors.transparent, 
               child: PageView.builder(
-                controller: _pageController,
+                controller: _menuPageController,
                 itemCount: _screens.length,
                 physics: const BouncingScrollPhysics(),
                 onPageChanged: (index) {
                    setState(() {
-                     _selectedIndex = index;
+                     _selectedMenuIndex = index;
                    });
                 },
                 itemBuilder: (context, index) {
-                  final bool isSelected = index == _selectedIndex;
-
+                  final isSelected = index == _selectedMenuIndex;
                   return GestureDetector(
                     onTap: () => _onMenuTap(index),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeOut,
-                      margin: EdgeInsets.only(
-                        top: isSelected ? 30 : 50,
-                        bottom: isSelected ? 20 : 5,
-                      ),
+                      margin: EdgeInsets.only(top: isSelected ? 30 : 50, bottom: isSelected ? 20 : 5),
                       decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isSelected ? Colors.pink.shade400 : Colors.white, // 選択色はピンク
-                          boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))
-                          ]
+                          // 選択中以外は透明
+                          color: isSelected ? Colors.pink.shade400 : Colors.transparent,
+                          boxShadow: isSelected ? [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15), 
+                              blurRadius: 8, 
+                              offset: const Offset(0, 4)
+                            )
+                          ] : [],
                       ),
                       child: Center(
                         child: Icon(
-                          _screens[index]['icon'],
-                          size: isSelected ? 40 : 30,
-                          color: isSelected ? Colors.white : Colors.pink.shade300,
+                          _screens[index]['icon'], 
+                          size: isSelected ? 40 : 30, 
+                          color: isSelected ? Colors.white : Colors.pink.shade400,
                         ),
                       ),
                     ),
@@ -347,7 +338,6 @@ class _ScreenThreeState extends State<ScreenThree> {
         ],
       ),
       
-      // テスト用ボタン（動作確認用）
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _simulateStreetPass,
         label: const Text('誕生日ゲット'),
