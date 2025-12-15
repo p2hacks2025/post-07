@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 
-class ScreenTwo extends StatefulWidget {
-  const ScreenTwo({super.key});
+class ScreenMap extends StatefulWidget {
+  const ScreenMap({super.key});
 
   @override
-  State<ScreenTwo> createState() => _ScreenTwoState();
+  State<ScreenMap> createState() => _ScreenMapState();
 }
 
 class _ScreenTwoState extends State<ScreenTwo> {
@@ -293,7 +293,7 @@ class _ScreenTwoState extends State<ScreenTwo> {
               ],
             ),
           ),
-        ),
+        ],
       ),
       
       floatingActionButton: FloatingActionButton.extended(
