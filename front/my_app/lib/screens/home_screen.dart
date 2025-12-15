@@ -54,6 +54,18 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
            const SnackBar(content: Text('ここがホームです')),
         );
+      } else if (index == 4) {
+        // 広場画面へ遷移
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ScreenEleven()),
+        );
+      } else if (index == 5) {
+        // トロフィー画面へ遷移
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ScreenTen()),
+        );
       } else {
         // その他のボタン（準備中）
         ScaffoldMessenger.of(context).showSnackBar(
