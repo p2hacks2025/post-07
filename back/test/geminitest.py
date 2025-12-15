@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 
 def main():
-    load_dotenv()  # ← これが重要
+    load_dotenv(override=True)  # ← これが重要
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
