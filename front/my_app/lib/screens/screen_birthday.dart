@@ -38,7 +38,7 @@ class _ScreenThreeState extends State<ScreenThree> {
   void initState() {
     super.initState();
     // メニューのコントローラー初期化
-    _menuPageController = PageController(initialPage: _initialMenuIndex, viewportFraction: 0.2);
+    _menuPageController = PageController(initialPage: _initialMenuIndex, viewportFraction: 0.1);
     
     // カレンダーのコントローラー初期化
     _calendarPageController = PageController(initialPage: _initialCalendarPage);
