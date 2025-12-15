@@ -8,59 +8,7 @@ class ScreenMap extends StatefulWidget {
   State<ScreenMap> createState() => _ScreenMapState();
 }
 
-class _ScreenMapState extends State<ScreenMap> {
-  // メニューの初期位置（地図画面なので index: 2）
-  int _selectedIndex = 2; 
-  late PageController _pageController;
-
-  // メニューデータ
-  final List<Map<String, dynamic>> _screens = [
-    {'title': 'ホーム', 'icon': Icons.home_rounded, 'route': '/home'},
-    {'title': 'マイプロフィール', 'icon': Icons.person_rounded, 'route': '/profile'},
-    {'title': '出身地埋め', 'icon': Icons.map_rounded, 'route': '/map'}, // 現在地
-    {'title': '誕生日埋め', 'icon': Icons.cake_rounded, 'route': '/birthday'},
-    {'title': '広場', 'icon': Icons.people_alt_rounded, 'route': '/square'},
-    {'title': 'トロフィー', 'icon': Icons.emoji_events_rounded, 'route': '/trophy'},
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    // ビューポートを調整してアイコンを詰め込みすぎないようにする
-    _pageController = PageController(initialPage: _selectedIndex, viewportFraction: 0.2);
-  }
-
-  // 画面遷移の処理
-  void _onMenuTap(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    // ページコントローラーもアニメーションさせる
-    _pageController.animateToPage(
-      index, 
-      duration: const Duration(milliseconds: 300), 
-      curve: Curves.easeOut
-    );
-
-    // 実際の画面遷移ロジック
-    if (index == 0) {
-      // ホーム（0番）なら、戻る（pop）
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    } else if (index == 2) {
-      // 地図（2番）なら何もしない（今の画面）
-    } else {
-      // その他の画面（未実装の場合はスナックバー表示）
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${_screens[index]['title']} 画面へ移動します（実装待ち）'),
-          duration: const Duration(milliseconds: 500),
-        ),
-      );
-      // 実装済みならここで Navigator.push(...) などを呼ぶ
-      // Navigator.push(context, MaterialPageRoute(builder: (_) => NextScreen()));
-    }
-  }
-
+class _ScreenTwoState extends State<ScreenTwo> {
   // 都道府県データ
   final Map<String, Map<String, dynamic>> _prefectureData = {
     'Hokkaido': {'name': '北海道', 'trivia': '実は「北海道」という名前は、松浦武四郎という人が名付けたんだよ。', 'isCollected': false},
@@ -127,8 +75,7 @@ class _ScreenMapState extends State<ScreenMap> {
     );
   }
 
-  // ボックスをさらに大きく、横長に調整
-  Widget _buildPrefBox(String id, String label, {double width = 50, double height = 35}) {
+  Widget _buildPrefBox(String id, String label, {double width = 58, double height = 44}) {
     final data = _prefectureData[id] ?? {'name': label, 'trivia': 'まだデータがないよ', 'isCollected': false};
     final bool isCollected = data['isCollected'];
 
@@ -171,7 +118,7 @@ class _ScreenMapState extends State<ScreenMap> {
         duration: const Duration(milliseconds: 500),
         width: width,
         height: height,
-        margin: const EdgeInsets.all(2.0), // マージンを増やして間隔をあける
+        margin: const EdgeInsets.all(2.0),
         decoration: BoxDecoration(
           color: isCollected ? Colors.orange : Colors.white,
           border: Border.all(color: Colors.grey.shade400, width: 1.0),
@@ -184,7 +131,7 @@ class _ScreenMapState extends State<ScreenMap> {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 12, 
+            fontSize: 11,
             fontWeight: FontWeight.bold,
             color: isCollected ? Colors.white : Colors.black87,
           ),
@@ -200,236 +147,160 @@ class _ScreenMapState extends State<ScreenMap> {
 
     return Scaffold(
       backgroundColor: Colors.blue.shade100,
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.orange),
-              child: Text('メニュー', style: TextStyle(color: Colors.white, fontSize: 24)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text('ホームへ戻る'),
-              onTap: () => Navigator.popUntil(context, (route) => route.isFirst),
-            ),
-          ],
-        ),
-      ),
       appBar: AppBar(
-        title: const Text('全国すれ違い図鑑'),
+        // ■■■ 1. 戻るボタンの追加 ■■■
+        // Navigator.pop で前の画面（ホーム）に戻ります
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+        
         backgroundColor: Colors.orange,
         centerTitle: true,
-        leading: Builder(
-          builder: (context) {
-            return IconButton(
-              icon: const Icon(Icons.menu),
-              onPressed: () {
-                Scaffold.of(context).openDrawer();
-              },
-            );
-          },
+        toolbarHeight: 40,
+        title: Transform.translate(
+          offset: const Offset(0, -5),
+          child: const Text('全国すれ違い図鑑', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ),
         actions: [
            Center(
              child: Padding(
                padding: const EdgeInsets.only(right: 16.0),
-               child: Text('$collectedCount / $totalCount', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+               child: Transform.translate(
+                 offset: const Offset(0, -5),
+                 child: Text('$collectedCount / $totalCount', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+               ),
              ),
            )
         ],
       ),
       
-      body: Stack(
-        children: [
-          // ===================================================
-          // 1. 地図表示エリア
-          // ===================================================
-          Positioned.fill(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.vertical, // 縦スクロールのみ許可
-              child: FittedBox(
-                // ■■■ ここが重要: 横幅に合わせて強制フィット ■■■
-                // これにより、画面の左右いっぱいまで地図が引き伸ばされます
-                fit: BoxFit.fitWidth, 
-                child: SizedBox(
-                  // キャンバスの定義（横幅700に設定して要素を散りばめる）
-                  width: 680, 
-                  height: 850, 
-                  child: Stack(
+      // ■■■ 2. メニューを消してシンプルに ■■■
+      body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: FittedBox(
+          fit: BoxFit.fitWidth, 
+          alignment: Alignment.topCenter, 
+          child: SizedBox(
+            width: 850, 
+            height: 850, 
+            child: Stack(
+              children: [
+                // --- 九州 ---
+                Positioned(
+                  top: 520,
+                  left: 20, 
+                  child: Column(
                     children: [
-                      // --- 九州（左端 0px） ---
-                      Positioned(
-                        top: 550,
-                        left: 20,
-                        child: Column(
-                          children: [
-                            Row(children: [_buildPrefBox('Saga', '佐賀'), _buildPrefBox('Fukuoka', '福岡')]),
-                            Row(children: [_buildPrefBox('Nagasaki', '長崎'), _buildPrefBox('Oita', '大分')]),
-                            Row(children: [_buildPrefBox('Kumamoto', '熊本'), _buildPrefBox('Miyazaki', '宮崎')]),
-                            _buildPrefBox('Kagoshima', '鹿児島'),
-                          ],
-                        ),
-                      ),
-
-                      // --- 中国（九州より右へ） ---
-                      Positioned(
-                        top: 480,
-                        left: 140, 
-                        child: Column(
-                          children: [
-                             Row(children: [_buildPrefBox('Shimane', '島根'), _buildPrefBox('Tottori', '鳥取'), _buildPrefBox('Okayama', '岡山')]),
-                             Row(children: [_buildPrefBox('Yamaguchi', '山口'), _buildPrefBox('Hiroshima', '広島')]),
-                          ],
-                        ),
-                      ),
-
-                      // --- 四国 ---
-                      Positioned(
-                        top: 580,
-                        left: 160, 
-                        child: Column(
-                          children: [
-                            Row(children: [_buildPrefBox('Ehime', '愛媛'), _buildPrefBox('Kagawa', '香川')]),
-                            Row(children: [_buildPrefBox('Kochi', '高知'), _buildPrefBox('Tokushima', '徳島')]),
-                          ],
-                        ),
-                      ),
-
-                      // --- 近畿 ---
-                      Positioned(
-                        top: 520,
-                        left: 280, 
-                        child: Column(
-                          children: [
-                            Row(children: [_buildPrefBox('Kyoto', '京都'), _buildPrefBox('Shiga', '滋賀'), _buildPrefBox('Mie', '三重')]),
-                            Row(children: [_buildPrefBox('Hyogo', '兵庫'), _buildPrefBox('Osaka', '大阪'), _buildPrefBox('Nara', '奈良')]),
-                            _buildPrefBox('Wakayama', '和歌山'),
-                          ],
-                        ),
-                      ),
-
-                      // --- 中部 ---
-                      Positioned(
-                        top: 402,
-                        left: 305, 
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Row(children: [_buildPrefBox('Niigata', '新潟'), _buildPrefBox('Nagano', '長野')]),
-                            Row(children: [_buildPrefBox('Toyama', '富山'), _buildPrefBox('Gifu', '岐阜'), _buildPrefBox('Yamanashi', '山梨')]),
-                            Row(children: [_buildPrefBox('Ishikawa', '石川'), _buildPrefBox('Fukui', '福井'), _buildPrefBox('Aichi', '愛知'), _buildPrefBox('Shizuoka', '静岡')]),
-                          ],
-                        ),
-                      ),
-
-                      // --- 関東 ---
-                      Positioned(
-                        top: 520,
-                        left: 460, 
-                        child: Column(
-                          children: [
-                            Row(children: [_buildPrefBox('Tochigi', '栃木'), _buildPrefBox('Ibaraki', '茨城')]),
-                            Row(children: [_buildPrefBox('Gunma', '群馬'), _buildPrefBox('Saitama', '埼玉'), _buildPrefBox('Chiba', '千葉')]),
-                            Row(children: [_buildPrefBox('Tokyo', '東京'), _buildPrefBox('Kanagawa', '神奈川')]),
-                          ],
-                        ),
-                      ),
-
-                      // --- 東北 ---
-                      Positioned(
-                        top: 360,
-                        left: 520,
-                        child: Column(
-                          children: [
-                            Row(children: [_buildPrefBox('Aomori', '青森'), _buildPrefBox('Iwate', '岩手')]),
-                            Row(children: [_buildPrefBox('Akita', '秋田'), _buildPrefBox('Miyagi', '宮城')]),
-                            Row(children: [_buildPrefBox('Yamagata', '山形'), _buildPrefBox('Fukushima', '福島')]),
-                          ],
-                        ),
-                      ),
-
-                      // --- 北海道（右端いっぱい 700px付近まで使用） ---
-                      Positioned(
-                        top: 240,
-                        left: 520,
-                        child: _buildPrefBox('Hokkaido', '北海道', width: 130, height: 90),
-                      ),
-
-                      // --- 沖縄 ---
-                      Positioned(
-                        top: 800,
-                        left: 20,
-                        child: _buildPrefBox('Okinawa', '沖縄', width: 100),
-                      ),
+                      Row(children: [_buildPrefBox('Saga', '佐賀'), _buildPrefBox('Fukuoka', '福岡')]),
+                      Row(children: [_buildPrefBox('Nagasaki', '長崎'), _buildPrefBox('Oita', '大分')]),
+                      Row(children: [_buildPrefBox('Kumamoto', '熊本'), _buildPrefBox('Miyazaki', '宮崎')]),
+                      _buildPrefBox('Kagoshima', '鹿児島'),
                     ],
                   ),
                 ),
-              ),
-            ),
-          ),
 
-          // ===================================================
-          // 2. 下部メニューバー（タップで遷移可能）
-          // ===================================================
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              height: 120,
-              // グラデーションで少し見やすく
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.4),
-                    Colors.transparent,
-                  ],
+                // --- 中国 ---
+                Positioned(
+                  top: 420,
+                  left: 170, 
+                  child: Column(
+                    children: [
+                       Row(children: [_buildPrefBox('Shimane', '島根'), _buildPrefBox('Tottori', '鳥取'), _buildPrefBox('Okayama', '岡山')]),
+                       Row(children: [_buildPrefBox('Yamaguchi', '山口'), _buildPrefBox('Hiroshima', '広島')]),
+                    ],
+                  ),
                 ),
-              ),
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: _screens.length,
-                physics: const BouncingScrollPhysics(),
-                onPageChanged: (index) {
-                   setState(() {
-                     _selectedIndex = index;
-                   });
-                },
-                itemBuilder: (context, index) {
-                  final bool isSelected = index == _selectedIndex;
 
-                  // アイコン自体をタップ可能にする
-                  return GestureDetector(
-                    onTap: () => _onMenuTap(index), // タップ時の処理
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                      margin: EdgeInsets.only(
-                        top: isSelected ? 30 : 50,
-                        bottom: isSelected ? 20 : 5,
-                      ),
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSelected ? Colors.orange : Colors.white.withOpacity(0.2), // 選択中は背景色あり
-                          boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))
-                          ]
-                      ),
-                      child: Center(
-                        child: Icon(
-                          _screens[index]['icon'],
-                          size: isSelected ? 40 : 30,
-                          color: isSelected ? Colors.white : Colors.white.withOpacity(0.9),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+                // --- 四国 ---
+                Positioned(
+                  top: 570,
+                  left: 210, 
+                  child: Column(
+                    children: [
+                      Row(children: [_buildPrefBox('Ehime', '愛媛'), _buildPrefBox('Kagawa', '香川')]),
+                      Row(children: [_buildPrefBox('Kochi', '高知'), _buildPrefBox('Tokushima', '徳島')]),
+                    ],
+                  ),
+                ),
+
+                // --- 近畿 ---
+                Positioned(
+                  top: 420,
+                  left: 360, 
+                  child: Column(
+                    children: [
+                      Row(children: [_buildPrefBox('Kyoto', '京都'), _buildPrefBox('Shiga', '滋賀'), _buildPrefBox('Mie', '三重')]),
+                      Row(children: [_buildPrefBox('Hyogo', '兵庫'), _buildPrefBox('Osaka', '大阪'), _buildPrefBox('Nara', '奈良')]),
+                      _buildPrefBox('Wakayama', '和歌山'),
+                    ],
+                  ),
+                ),
+
+                // --- 中部 ---
+                Positioned(
+                  top: 250,
+                  left: 400, 
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(children: [_buildPrefBox('Niigata', '新潟'), _buildPrefBox('Nagano', '長野')]),
+                      Row(children: [_buildPrefBox('Toyama', '富山'), _buildPrefBox('Gifu', '岐阜'), _buildPrefBox('Yamanashi', '山梨')]),
+                      Row(children: [_buildPrefBox('Ishikawa', '石川'), _buildPrefBox('Fukui', '福井'), _buildPrefBox('Aichi', '愛知'), _buildPrefBox('Shizuoka', '静岡')]),
+                    ],
+                  ),
+                ),
+
+                // --- 関東 ---
+                Positioned(
+                  top: 340,
+                  left: 650, 
+                  child: Column(
+                    children: [
+                      Row(children: [_buildPrefBox('Tochigi', '栃木'), _buildPrefBox('Ibaraki', '茨城')]),
+                      Row(children: [_buildPrefBox('Gunma', '群馬'), _buildPrefBox('Saitama', '埼玉'), _buildPrefBox('Chiba', '千葉')]),
+                      Row(children: [_buildPrefBox('Tokyo', '東京'), _buildPrefBox('Kanagawa', '神奈川')]),
+                    ],
+                  ),
+                ),
+
+                // --- 東北 ---
+                Positioned(
+                  top: 150,
+                  left: 680,
+                  child: Column(
+                    children: [
+                      Row(children: [_buildPrefBox('Aomori', '青森'), _buildPrefBox('Iwate', '岩手')]),
+                      Row(children: [_buildPrefBox('Akita', '秋田'), _buildPrefBox('Miyagi', '宮城')]),
+                      Row(children: [_buildPrefBox('Yamagata', '山形'), _buildPrefBox('Fukushima', '福島')]),
+                    ],
+                  ),
+                ),
+
+                // --- 北海道 ---
+                Positioned(
+                  top: 10,
+                  left: 700,
+                  child: _buildPrefBox('Hokkaido', '北海道', width: 100, height: 75),
+                ),
+
+                // --- 沖縄 ---
+                Positioned(
+                  top: 780,
+                  left: 20,
+                  child: _buildPrefBox('Okinawa', '沖縄', width: 80),
+                ),
+              ],
             ),
           ),
         ],
+      ),
+      
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _simulateStreetPass,
+        label: const Text('すれ違いテスト'),
+        icon: const Icon(Icons.person_add),
+        backgroundColor: Colors.orange,
       ),
     );
   }
