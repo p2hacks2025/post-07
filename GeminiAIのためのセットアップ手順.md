@@ -26,5 +26,6 @@
 
 8. 仮想環境の設定
     * conda activate gemini-env
+    
 9. 実行
     * python back/test/geminitest.py
