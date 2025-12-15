@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'screen_one.dart';
 import 'screen_profile.dart';
 import 'screen_map.dart';
 import 'screen_birthday.dart';
