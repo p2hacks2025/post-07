@@ -5,6 +5,7 @@ from firebase_admin import credentials, firestore, storage
 _db = None
 _bucket = None
 
+# ★ここが重要！関数名を 'initialize' に統一します
 def initialize():
     """Firebaseを初期化し、DBとBucketへの接続を確立する"""
     global _db, _bucket
@@ -14,9 +15,9 @@ def initialize():
         # 鍵ファイルの読み込み
         cred = credentials.Certificate("serviceAccountKey.json")
         
-        # 初期化（バケット名は自分のものに書き換えてください！）
+        # 初期化（バケット名はあなたのプロジェクトIDに合わせています）
         firebase_admin.initialize_app(cred, {
-            'storageBucket': 'hakodate-ar-2025.firebasestorage.app' 
+            'storageBucket': 'hakodate-ar-2025.appspot.com' 
         })
         
         _db = firestore.client()
