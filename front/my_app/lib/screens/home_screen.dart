@@ -1,10 +1,16 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
+import 'package:uuid/uuid.dart';
 
 import 'screen_profile.dart';
 import 'screen_map.dart';
 import 'screen_birthday.dart';
 import 'screen_ten.dart';
 import 'screen_eleven.dart';
+import 'screen_encounter.dart';
 
 
 void main() {
@@ -21,11 +27,105 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0; // 現在真ん中にあるアイコンの番号
   late PageController _pageController;
+  StreamSubscription<List<ScanResult>>? _scanSubscription;
+  bool _hasDetected = false; // 重複検知を防ぐフラグ
+  
+  // BLE広告用のフィールド
+  final FlutterBlePeripheral _blePeripheral = FlutterBlePeripheral();
+  late String _myDeviceId; // 自分のデバイスID
 
   @override
   void initState() {
     super.initState();
+    
+    // 自分の一意IDを生成（UUIDを使用）
+    _myDeviceId = const Uuid().v4();
+    
     _pageController = PageController(initialPage: _selectedIndex, viewportFraction: 0.1);
+    
+    // BLEスキャンを開始
+    _startBleScan();
+    
+    // BLE広告を開始（ペリフェラル機能）
+    _startBleAdvertising();
+  }
+
+  // BLEスキャンを開始
+  void _startBleScan() async {
+    try {
+      // Bluetoothアダプターの状態を確認
+      final adapterState = await FlutterBluePlus.adapterState.first;
+      
+      if (adapterState == BluetoothAdapterState.on) {
+        // スキャンを開始
+        await FlutterBluePlus.startScan(timeout: const Duration(seconds: 60));
+        
+        // スキャン結果をリッスン
+        _scanSubscription = FlutterBluePlus.scanResults.listen((results) {
+          if (_hasDetected || !mounted) return; // すでに検知済みまたは破棄済みの場合は処理しない
+          
+          if (results.isNotEmpty) {
+            // 最初に検知したデバイスを取得
+            final device = results.first.device;
+            final deviceId = device.remoteId.toString();
+            
+            _hasDetected = true; // 重複検知を防ぐ
+            FlutterBluePlus.stopScan(); // スキャン停止
+            
+            // すれ違い画面に遷移
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ScreenEncounter(detectedUserId: deviceId),
+              ),
+            );
+          }
+        });
+      } else {
+        // Bluetoothが無効の場合
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Bluetoothを有効にしてください')),
+          );
+        }
+      }
+    } catch (e) {
+      // エラーハンドリング
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('BLEスキャンエラー: $e')),
+        );
+      }
+    }
+  }
+
+  // BLE広告（アドバタイズ）を開始
+  void _startBleAdvertising() async {
+    try {
+      // カスタムサービスUUID（すれ違いアプリ用）
+      const serviceUuid = '0000FFF0-0000-1000-8000-00805F9B34FB';
+      
+      // 自分のデバイスIDをバイト配列に変換
+      final deviceIdBytes = utf8.encode(_myDeviceId);
+      
+      // BLE広告を開始
+      await _blePeripheral.start(
+        advertiseData: AdvertiseData(
+          serviceUuid: serviceUuid,
+          manufacturerData: deviceIdBytes,
+          includeDeviceName: false,
+        ),
+      );
+      
+      debugPrint('BLE広告開始: デバイスID = $_myDeviceId');
+    } catch (e) {
+      debugPrint('BLE広告エラー: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('BLE広告エラー: $e')),
+        );
+      }
+    }
   }
 
   // メニューのデータ
@@ -37,6 +137,18 @@ class _HomeScreenState extends State<HomeScreen> {
     {'title': '広場', 'icon': Icons.people_alt_rounded, 'color': Colors.teal.shade400},
     {'title': 'トロフィー', 'icon': Icons.emoji_events_rounded, 'color': Colors.amber.shade600},
   ];
+
+  @override
+  void dispose() {
+    _scanSubscription?.cancel(); // スキャン購読をキャンセル
+    FlutterBluePlus.stopScan(); // スキャンを停止
+    
+    // BLE広告を停止
+    _blePeripheral.stop();
+    
+    _pageController.dispose();
+    super.dispose();
+  }
 
   // アイコンをタップしたときの処理
   void _onIconTapped(int index) {
