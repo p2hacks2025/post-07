@@ -30,10 +30,10 @@ cd stable-diffusion-webui
 
 ### 推奨モデル：v1-5
 
-1. Hugging Face でログイン
-2. `runwayml / stable-diffusion-v1-5` を開く
-3. ファイル `v1-5-pruned-emaonly.safetensors` をダウンロード
-4. フォルダに配置
+
+1. google検索で`runwayml / stable-diffusion-v1-5` にアクセス、Hugging Faceに飛ぶ
+2. ファイル `v1-5-pruned-emaonly.safetensors` をダウンロード
+3. フォルダに配置
 
 ```
 stable-diffusion-webui/models/Stable-diffusion/v1-5-pruned-emaonly.safetensors

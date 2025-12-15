@@ -4,13 +4,13 @@ import google.generativeai as genai
 import requests, base64
 
 def henerateImagefromtrivia(trivia):
-    load_dotenv()
+    load_dotenv(override=True)
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY is not set")
     
-    url = "http://127.0.0.1:7860/sdapi/v1/txt2img"
+    url = "https://585cb2ba36a4.ngrok-free.app/sdapi/v1/txt2img"
 
     genai.configure(api_key=api_key)
 
