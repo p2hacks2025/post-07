@@ -43,7 +43,13 @@ class _HomeScreenState extends State<HomeScreen> {
     // 真ん中のアイコン（選択中）をタップしたときだけ遷移などのアクション
     if (index == _selectedIndex) {
       
-      if (index == 2) {
+      if (index == 1) {
+        // マイプロフィール画面へ遷移
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ScreenTwo()),
+        );
+      } else if (index == 2) {
         // 地図画面へ遷移
         Navigator.push(
           context,
