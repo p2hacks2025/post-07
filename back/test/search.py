@@ -7,7 +7,7 @@ load_dotenv()
 SEARCH_API = os.getenv("SEARCH_API")
 URL = "https://api.search.brave.com/res/v1/web/search"
 
-def search_evidence(trivia):
+def search(trivia, judgetext):
     query = f"{trivia} 本当 事実"
 
     params = {
@@ -25,18 +25,18 @@ def search_evidence(trivia):
     res.raise_for_status()
     data = res.json()
 
-    return [
-        r["description"]
-        for r in data.get("web", {}).get("results", [])
-        if r.get("description")
-    ]
+    # return [
+    #     r["description"]
+    #     for r in data.get("web", {}).get("results", [])
+    #     if r.get("description")
+    # ]
 
 
-def judge_trivia(trivia, texts):
+
     positive = 0
 
-    for t in texts:
-        if "心臓が3つ" in t or "心臓は3つ" in t or "three hearts" in t:
+    for t in judgetext:
+        if judgetext in t:
             positive += 1
 
     if positive >= 2:
@@ -56,12 +56,12 @@ def judge_trivia(trivia, texts):
 if __name__ == "__main__":
     trivia = "タコの心臓は3つある"
 
-    texts = search_evidence(trivia)
-    result = judge_trivia(trivia, texts)
+    texts = search(trivia)
+    # result = judge_trivia(trivia, texts)
 
     output = {
-        "trivia": trivia,
-        **result
+        # "trivia": trivia,
+        # **result
     }
 
     print(output)

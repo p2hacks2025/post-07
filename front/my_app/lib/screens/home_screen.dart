@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
-import 'screen_two.dart'; // ★ screen_two.dart を読み込む
+
+import 'screen_one.dart';
+import 'screen_two.dart';
+import 'screen_three.dart';
+import 'screen_ten.dart';
+import 'screen_eleven.dart';
+
 
 void main() {
   runApp(const MaterialApp(home: HomeScreen()));
