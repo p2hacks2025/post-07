@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'screen_one.dart';
+import 'screen_profile.dart';
 import 'screen_map.dart';
 import 'screen_birthday.dart';
 import 'screen_ten.dart';
@@ -47,13 +48,13 @@ class _HomeScreenState extends State<HomeScreen> {
         // マイプロフィール画面へ遷移
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const ScreenTwo()),
+          MaterialPageRoute(builder: (context) => const ScreenProfile()),
         );
       } else if (index == 2) {
         // 地図画面へ遷移
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const ScreenTwo()),
+          MaterialPageRoute(builder: (context) => const ScreenMap()),
         );
       } else if (index == 3) {
         // 誕生日画面へ遷移
