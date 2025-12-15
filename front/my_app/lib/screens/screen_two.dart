@@ -298,7 +298,7 @@ class _ScreenTwoState extends State<ScreenTwo> {
     if (_formKey.currentState!.validate()) {
       try {
         // APIのエンドポイントURL（ご自身のサーバーURLに変更してください）
-        final url = Uri.parse('http://localhost:5000/api/profile');
+        final url = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/');
         
         // 送信するデータ
         final data = {
@@ -319,6 +319,7 @@ class _ScreenTwoState extends State<ScreenTwo> {
           url,
           headers: {
             'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true',
           },
           body: jsonEncode(data),
         );
