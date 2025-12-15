@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'screen_one.dart';
-import 'screen_two.dart';
-import 'screen_three.dart';
+import 'screen_map.dart';
+import 'screen_birthday.dart';
 import 'screen_ten.dart';
 import 'screen_eleven.dart';
 
@@ -55,7 +55,15 @@ class _HomeScreenState extends State<HomeScreen> {
           context,
           MaterialPageRoute(builder: (context) => const ScreenTwo()),
         );
-      } else if (index == 0) {
+      } else if (index == 3) {
+        // 誕生日画面へ遷移
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ScreenThree()),
+        );
+      }
+      
+      else if (index == 0) {
         // ホームボタンを押したとき（特に何もしないか、更新など）
         ScaffoldMessenger.of(context).showSnackBar(
            const SnackBar(content: Text('ここがホームです')),
