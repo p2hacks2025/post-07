@@ -9,35 +9,18 @@ class ScreenThree extends StatefulWidget {
 }
 
 class _ScreenThreeState extends State<ScreenThree> {
-  // ■ メニュー用コントローラー
-  final int _initialMenuIndex = 3; // 誕生日画面は3番目
-  late PageController _menuPageController;
-  int _selectedMenuIndex = 3;
-
   // ■ カレンダー用コントローラー
-  // 月を無限にスワイプできるように、初期位置を大きな数字（真ん中）に設定します
   final int _initialCalendarPage = 1000;
   late PageController _calendarPageController;
-  late DateTime _baseMonth; // 基準となる月（現在）
-  DateTime _currentDisplayMonth = DateTime.now(); // 今表示している月
+  late DateTime _baseMonth; 
+  DateTime _currentDisplayMonth = DateTime.now();
 
   // 獲得した誕生日リスト
   final Set<String> _collectedBirthdays = {};
 
-  // ■ 修正点1: 画面遷移用の 'route' をリストに戻しました
-  final List<Map<String, dynamic>> _screens = [
-    {'title': 'ホーム', 'icon': Icons.home_rounded, 'route': '/home'},
-    {'title': 'マイプロフィール', 'icon': Icons.person_rounded, 'route': '/profile'},
-    {'title': '出身地埋め', 'icon': Icons.map_rounded, 'route': '/map'}, 
-    {'title': '誕生日埋め', 'icon': Icons.cake_rounded, 'route': '/birthday'}, 
-    {'title': '広場', 'icon': Icons.people_alt_rounded, 'route': '/square'},
-    {'title': 'トロフィー', 'icon': Icons.emoji_events_rounded, 'route': '/trophy'},
-  ];
-
   @override
   void initState() {
     super.initState();
-    _menuPageController = PageController(initialPage: _initialMenuIndex, viewportFraction: 0.1);
     _calendarPageController = PageController(initialPage: _initialCalendarPage);
     _baseMonth = DateTime.now();
     _currentDisplayMonth = _baseMonth;
@@ -45,41 +28,8 @@ class _ScreenThreeState extends State<ScreenThree> {
 
   @override
   void dispose() {
-    _menuPageController.dispose();
     _calendarPageController.dispose();
     super.dispose();
-  }
-
-  // ■ 修正点2: タップ時の画面遷移処理を実装
-  void _onMenuTap(int index) {
-    // まず見た目のアニメーション処理
-    if (index != _selectedMenuIndex) {
-      _menuPageController.animateToPage(
-        index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-      setState(() {
-        _selectedMenuIndex = index;
-      });
-    }
-
-    // 画面遷移ロジック
-    final routeName = _screens[index]['route'];
-    
-    // 少し遅らせて遷移させるとアニメーションが見えて心地よいですが、
-    // 即座に遷移させたい場合は Future.delayed を外してください。
-    Future.delayed(const Duration(milliseconds: 200), () {
-      if (routeName == '/home') {
-        // ホームならスタックを全部消して戻る
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      } else if (routeName == '/birthday') {
-        // 自分自身の画面なら何もしない
-      } else {
-        // 他の画面へ遷移（main.dartでroutesが設定されている前提）
-        Navigator.of(context).pushNamed(routeName);
-      }
-    });
   }
 
   // カレンダーの月移動
@@ -177,10 +127,9 @@ class _ScreenThreeState extends State<ScreenThree> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 50.0),
       child: GridView.builder(
-        // ■ 修正点: スクロール可能に戻しました（BouncingScrollPhysics）
         physics: const BouncingScrollPhysics(), 
-        // メニューの裏までスクロールできるように下の余白を確保
-        padding: const EdgeInsets.only(bottom: 120), 
+        // ■■■ メニューが消えたので下の余白も削除 ■■■
+        padding: const EdgeInsets.only(bottom: 20), 
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 7, 
           childAspectRatio: 1.1, 
@@ -201,7 +150,12 @@ class _ScreenThreeState extends State<ScreenThree> {
     return Scaffold(
       backgroundColor: Colors.pink.shade50,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        // ■■■ 1. 戻るボタンの追加 ■■■
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+        
         backgroundColor: Colors.pink.shade400,
         centerTitle: true,
         toolbarHeight: 40,
@@ -222,6 +176,7 @@ class _ScreenThreeState extends State<ScreenThree> {
         ],
       ),
 
+      // ■■■ 2. メニューを消してシンプルに ■■■
       body: Stack(
         children: [
           Positioned.fill(
@@ -279,55 +234,6 @@ class _ScreenThreeState extends State<ScreenThree> {
                 ),
               ),
             ],
-          ),
-
-          // 下部メニュー
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              height: 120,
-              color: Colors.transparent, 
-              child: PageView.builder(
-                controller: _menuPageController,
-                itemCount: _screens.length,
-                physics: const BouncingScrollPhysics(),
-                onPageChanged: (index) {
-                   // 手動スワイプ時は遷移させず、アイコン選択状態だけ更新する（必要ならここでも遷移可能）
-                   setState(() {
-                     _selectedMenuIndex = index;
-                   });
-                },
-                itemBuilder: (context, index) {
-                  final isSelected = index == _selectedMenuIndex;
-                  return GestureDetector(
-                    onTap: () => _onMenuTap(index),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                      margin: EdgeInsets.only(top: isSelected ? 30 : 50, bottom: isSelected ? 20 : 5),
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSelected ? Colors.pink.shade400 : Colors.transparent,
-                          boxShadow: isSelected ? [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.15), 
-                              blurRadius: 8, 
-                              offset: const Offset(0, 4)
-                            )
-                          ] : [],
-                      ),
-                      child: Center(
-                        child: Icon(
-                          _screens[index]['icon'], 
-                          size: isSelected ? 40 : 30, 
-                          color: isSelected ? Colors.white : Colors.pink.shade400,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
           ),
         ],
       ),
