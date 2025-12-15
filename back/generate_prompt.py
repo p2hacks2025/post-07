@@ -10,7 +10,7 @@ def henerateImagefromtrivia(trivia):
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY is not set")
     
-    url = "https://585cb2ba36a4.ngrok-free.app/sdapi/v1/txt2img"
+    url = "https://17413e299b41.ngrok-free.app/sdapi/v1/txt2img"
 
     genai.configure(api_key=api_key)
 
@@ -30,7 +30,7 @@ def henerateImagefromtrivia(trivia):
 
     payload = {
         "prompt": response.text,
-        "negative prompt":"low quality, worst quality, blurry, grainy, pixelated, jpeg artifacts, bad anatomy, deformed,"
+        "negative_prompt":"low quality, worst quality, blurry, grainy, pixelated, jpeg artifacts, bad anatomy, deformed,"
                                 " extra limbs, missing limbs, wrong hands, malformed face,text, logo, watermark, signature, username,nsfw, nudity,"
                                 " gore, violence,overexposed, oversaturated, ugly",
         "steps": 35,
@@ -38,7 +38,7 @@ def henerateImagefromtrivia(trivia):
         "height": 512
     }
 
-    r = requests.post(url, json=payload)
+    r = requests.post(url, json=payload,auth=("user", "password"))
     r.raise_for_status()
 
     img = r.json()["images"][0]
@@ -50,4 +50,4 @@ def henerateImagefromtrivia(trivia):
 
 
 if __name__ == "__main__":
-    henerateImagefromtrivia("タコの心臓は３つある")
+    henerateImagefromtrivia("付箋の由来は拷問器具")
