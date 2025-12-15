@@ -8,7 +8,7 @@ class ScreenMap extends StatefulWidget {
   State<ScreenMap> createState() => _ScreenMapState();
 }
 
-class _ScreenTwoState extends State<ScreenTwo> {
+class _ScreenMapState extends State<ScreenMap> {
   // 都道府県データ
   final Map<String, Map<String, dynamic>> _prefectureData = {
     'Hokkaido': {'name': '北海道', 'trivia': '実は「北海道」という名前は、松浦武四郎という人が名付けたんだよ。', 'isCollected': false},
@@ -293,7 +293,7 @@ class _ScreenTwoState extends State<ScreenTwo> {
               ],
             ),
           ),
-        ],
+        ),
       ),
       
       floatingActionButton: FloatingActionButton.extended(
