@@ -27,7 +27,7 @@ class _ScreenTwoState extends State<ScreenTwo> {
   void initState() {
     super.initState();
     // ビューポートを調整してアイコンを詰め込みすぎないようにする
-    _pageController = PageController(initialPage: _selectedIndex, viewportFraction: 0.2);
+    _pageController = PageController(initialPage: _selectedIndex, viewportFraction: 0.1);
   }
 
   // 画面遷移の処理
@@ -203,7 +203,7 @@ class _ScreenTwoState extends State<ScreenTwo> {
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
-          children: [
+          /*children: [
             const DrawerHeader(
               decoration: BoxDecoration(color: Colors.orange),
               child: Text('メニュー', style: TextStyle(color: Colors.white, fontSize: 24)),
@@ -213,11 +213,13 @@ class _ScreenTwoState extends State<ScreenTwo> {
               title: const Text('ホームへ戻る'),
               onTap: () => Navigator.popUntil(context, (route) => route.isFirst),
             ),
-          ],
+          ],*/
         ),
       ),
       appBar: AppBar(
         title: const Text('全国トリビア図鑑'),
+        toolbarHeight: 20,
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.orange,
         centerTitle: true,
         leading: Builder(
@@ -358,7 +360,7 @@ class _ScreenTwoState extends State<ScreenTwo> {
 
                       // --- 沖縄 ---
                       Positioned(
-                        top: 800,
+                        top: 730,
                         left: 20,
                         child: _buildPrefBox('Okinawa', '沖縄', width: 100),
                       ),
