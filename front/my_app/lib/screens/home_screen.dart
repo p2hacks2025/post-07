@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'screen_profile.dart';
 import 'screen_map.dart';
 import 'screen_birthday.dart';
-import 'screen_ten.dart';
-import 'screen_eleven.dart';
+import 'screen_achieve.dart';
+import 'screen_park.dart';
 
 
 void main() {
@@ -59,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // 誕生日画面へ遷移
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const ScreenThree()),
+          MaterialPageRoute(builder: (context) => const ScreenBirthday()),
         );
       }
       

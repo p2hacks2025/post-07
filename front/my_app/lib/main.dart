@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
       // ■ ここが修正ポイント：画面遷移の登録表 (ルーティング)
       routes: {
         '/home': (context) => const HomeScreen(),
-        '/birthday': (context) => const ScreenThree(), // 誕生日画面
+        '/birthday': (context) => const ScreenBirthday(), // 誕生日画面
         
         // まだ作っていない画面は、一旦「仮の画面」を表示させるようにしています
         '/profile': (context) => const PlaceholderScreen(title: 'マイプロフィール'),

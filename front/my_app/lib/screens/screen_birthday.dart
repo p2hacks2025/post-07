@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 
-class ScreenThree extends StatefulWidget {
-  const ScreenThree({super.key});
+class ScreenBirthday extends StatefulWidget {
+  const ScreenBirthday({super.key});
 
   @override
-  State<ScreenThree> createState() => _ScreenThreeState();
+  State<ScreenBirthday> createState() => _ScreenBirthdayState();
 }
 
-class _ScreenThreeState extends State<ScreenThree> {
+class _ScreenBirthdayState extends State<ScreenBirthday> {
   // ■ カレンダー用コントローラー
   final int _initialCalendarPage = 1000;
   late PageController _calendarPageController;
