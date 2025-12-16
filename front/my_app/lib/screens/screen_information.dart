@@ -326,7 +326,7 @@ class _ScreenInformationState extends State<ScreenInformation> {
                                                       textAlignVertical: TextAlignVertical.top,
                                                       style: const TextStyle(fontSize: 14),
                                                       decoration: const InputDecoration(
-                                                        labelText: 'TRIVIA',
+                                                        labelText: 'トリビア',
                                                         labelStyle: TextStyle(fontSize: 10),
                                                         hintText: '豆知識...',
                                                         border: InputBorder.none, // 枠線はContainerで描画
