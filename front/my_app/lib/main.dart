@@ -15,6 +15,7 @@ void main() async {
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
+   //DeviceOrientation.portraitUp, // 縦固定
   ]);
 
   // ▼▼▼ ここが追加したロジックです ▼▼▼

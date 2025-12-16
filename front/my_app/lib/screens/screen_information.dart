@@ -2,6 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+// ★ここに遷移先のファイルをインポートしてください
+import 'home_screen.dart'; 
+
 class ScreenInformation extends StatefulWidget {
   const ScreenInformation({super.key});
 
@@ -14,9 +17,9 @@ class _ScreenInformationState extends State<ScreenInformation> {
   final _triviaController = TextEditingController();
   final _birthdayController = TextEditingController();
   final _birthplaceController = TextEditingController();
-  final _heeController = TextEditingController();
+  final _heeController = TextEditingController(); // 初期値は0に設定などを推奨
 
-  // ★追加：トリビア入力欄を強制的に操作するための「フォーカスノード」
+  // トリビア入力欄を強制的に操作するための「フォーカスノード」
   final FocusNode _triviaFocusNode = FocusNode();
 
   File? _profileImage;
@@ -25,19 +28,27 @@ class _ScreenInformationState extends State<ScreenInformation> {
   final ImagePicker _picker = ImagePicker();
 
   @override
+  void initState() {
+    super.initState();
+    // 「へぇ」の初期値を0にしておく
+    _heeController.text = "0";
+  }
+
+  @override
   void dispose() {
     _nicknameController.dispose();
     _triviaController.dispose();
     _birthdayController.dispose();
     _birthplaceController.dispose();
     _heeController.dispose();
-    _triviaFocusNode.dispose(); // ★忘れず破棄
+    _triviaFocusNode.dispose();
     super.dispose();
   }
 
   Future<void> _pickImage(bool isProfile) async {
     try {
-      final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      final XFile? pickedFile =
+          await _picker.pickImage(source: ImageSource.gallery);
       if (pickedFile != null) {
         setState(() {
           if (isProfile) {
@@ -53,7 +64,6 @@ class _ScreenInformationState extends State<ScreenInformation> {
   }
 
   Future<void> _selectDate() async {
-    // 別の入力を選んだときはキーボードを下げる
     FocusScope.of(context).unfocus();
     int tempMonth = 1;
     int tempDay = 1;
@@ -117,7 +127,8 @@ class _ScreenInformationState extends State<ScreenInformation> {
             children: [
               _buildPickerToolbar(
                 onDone: () {
-                  setState(() => _birthplaceController.text = prefectures[tempIndex]);
+                  setState(() =>
+                      _birthplaceController.text = prefectures[tempIndex]);
                   Navigator.pop(context);
                 },
               ),
@@ -127,7 +138,9 @@ class _ScreenInformationState extends State<ScreenInformation> {
                   physics: const FixedExtentScrollPhysics(),
                   onSelectedItemChanged: (i) => tempIndex = i,
                   childDelegate: ListWheelChildBuilderDelegate(
-                    builder: (c, i) => Center(child: Text(prefectures[i], style: const TextStyle(fontSize: 18))),
+                    builder: (c, i) => Center(
+                        child: Text(prefectures[i],
+                            style: const TextStyle(fontSize: 18))),
                     childCount: prefectures.length,
                   ),
                 ),
@@ -147,7 +160,9 @@ class _ScreenInformationState extends State<ScreenInformation> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('キャンセル')),
           TextButton(
             onPressed: onDone,
             child: const Text('完了', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -167,7 +182,8 @@ class _ScreenInformationState extends State<ScreenInformation> {
             physics: const FixedExtentScrollPhysics(),
             onSelectedItemChanged: onChanged,
             childDelegate: ListWheelChildBuilderDelegate(
-              builder: (c, i) => Center(child: Text('${i + 1}', style: const TextStyle(fontSize: 20))),
+              builder: (c, i) => Center(
+                  child: Text('${i + 1}', style: const TextStyle(fontSize: 20))),
               childCount: count,
             ),
           ),
@@ -177,14 +193,39 @@ class _ScreenInformationState extends State<ScreenInformation> {
     );
   }
 
+  // ★変更点：保存して画面遷移する処理
   Future<void> _saveProfile() async {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存しました')));
+    // バリデーション（入力チェック）が必要ならここに書きます
+    if (_nicknameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ニックネームを入力してください')),
+      );
+      return;
+    }
+
+    // 保存完了メッセージ
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('保存しました！ホームへ移動します'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    // 少し待ってから画面遷移（ユーザーにメッセージを読ませるため）
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (!mounted) return; // 画面がまだ存在しているかチェック
+
+    // ★HomeScreenへ移動（戻るボタンで戻れないように pushReplacement を使用）
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final Size screenSize = MediaQuery.of(context).size;
-    
+
     // === 横持ち用サイズ計算 ===
     double cardHeight = screenSize.height * 0.9;
     double cardWidth = cardHeight * 1.58;
@@ -196,14 +237,12 @@ class _ScreenInformationState extends State<ScreenInformation> {
 
     return GestureDetector(
       behavior: HitTestBehavior.deferToChild,
-      // 画面の何もないところをタップしたらキーボードを閉じる
       onTap: () {
-         FocusScope.of(context).unfocus();
+        FocusScope.of(context).unfocus();
       },
       child: Scaffold(
         backgroundColor: Colors.grey[300],
         resizeToAvoidBottomInset: true,
-        
         body: Center(
           child: SingleChildScrollView(
             child: Padding(
@@ -236,12 +275,14 @@ class _ScreenInformationState extends State<ScreenInformation> {
                             // ニックネーム
                             TextFormField(
                               controller: _nicknameController,
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
                               decoration: const InputDecoration(
                                 labelText: 'ニックネーム',
                                 border: OutlineInputBorder(),
                                 isDense: true,
-                                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 8),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -296,76 +337,101 @@ class _ScreenInformationState extends State<ScreenInformation> {
                                         ),
                                         const SizedBox(height: 4),
 
-                                        // ★修正：トリビア入力（onPressedのアイデアを採用して強力に入力モードにする）
+                                        // トリビア入力エリア
                                         Expanded(
                                           child: Row(
-                                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
                                             children: [
                                               // トリビア入力
                                               Expanded(
                                                 flex: 7,
                                                 child: GestureDetector(
-                                                  behavior: HitTestBehavior.opaque,
-                                                  // ★ここがポイント：枠全体をタップしたら強制的にキーボードを出す
+                                                  behavior:
+                                                      HitTestBehavior.opaque,
                                                   onTap: () {
-                                                    FocusScope.of(context).requestFocus(_triviaFocusNode);
+                                                    FocusScope.of(context)
+                                                        .requestFocus(
+                                                            _triviaFocusNode);
                                                   },
                                                   child: Container(
                                                     decoration: BoxDecoration(
-                                                      border: Border.all(color: Colors.grey),
-                                                      borderRadius: BorderRadius.circular(4),
+                                                      border: Border.all(
+                                                          color: Colors.grey),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              4),
                                                     ),
-                                                    padding: const EdgeInsets.all(8),
+                                                    padding:
+                                                        const EdgeInsets.all(8),
                                                     child: TextField(
-                                                      controller: _triviaController,
-                                                      focusNode: _triviaFocusNode, // ★フォーカスノードを接続
+                                                      controller:
+                                                          _triviaController,
+                                                      focusNode:
+                                                          _triviaFocusNode,
+                                                      keyboardType:
+                                                          TextInputType.multiline,
+                                                      textInputAction:
+                                                          TextInputAction.newline,
                                                       maxLines: null,
-                                                      // expands: true は不具合の原因になりやすいので一旦オフにし、
-                                                      // Containerで高さを確保する方式に変更しました
-                                                      expands: false, 
-                                                      textAlignVertical: TextAlignVertical.top,
-                                                      style: const TextStyle(fontSize: 14),
-                                                      decoration: const InputDecoration(
+                                                      expands: true,
+                                                      textAlignVertical:
+                                                          TextAlignVertical.top,
+                                                      style: const TextStyle(
+                                                          fontSize: 14),
+                                                      decoration:
+                                                          const InputDecoration(
                                                         labelText: 'トリビア',
-                                                        labelStyle: TextStyle(fontSize: 10),
+                                                        labelStyle: TextStyle(
+                                                            fontSize: 10),
                                                         hintText: '豆知識...',
-                                                        border: InputBorder.none, // 枠線はContainerで描画
+                                                        border: InputBorder.none,
                                                         isDense: true,
-                                                        contentPadding: EdgeInsets.zero,
+                                                        contentPadding:
+                                                            EdgeInsets.zero,
                                                       ),
                                                     ),
                                                   ),
                                                 ),
                                               ),
                                               const SizedBox(width: 8),
-                                              
-                                              // へぇ数 (右側に配置)
+
+                                              // ★変更点：へぇ数 (入力不可に修正)
                                               Container(
                                                 width: 60,
                                                 decoration: BoxDecoration(
                                                   color: Colors.blue[50],
-                                                  border: Border.all(color: Colors.blue),
-                                                  borderRadius: BorderRadius.circular(4),
+                                                  border: Border.all(
+                                                      color: Colors.blue),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
                                                 ),
                                                 child: Column(
-                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
                                                   children: [
-                                                    // へぇ数入力欄
                                                     SizedBox(
                                                       height: 40,
                                                       child: TextField(
-                                                        controller: _heeController,
-                                                        keyboardType: TextInputType.number,
-                                                        textAlign: TextAlign.center,
+                                                        controller:
+                                                            _heeController,
+                                                        readOnly: true, // ★ここを追加：入力不可にする
+                                                        textAlign:
+                                                            TextAlign.center,
                                                         style: const TextStyle(
                                                           fontSize: 20,
-                                                          fontWeight: FontWeight.bold,
+                                                          fontWeight:
+                                                              FontWeight.bold,
                                                           color: Colors.blue,
                                                         ),
-                                                        decoration: const InputDecoration(
-                                                          border: InputBorder.none,
+                                                        decoration:
+                                                            const InputDecoration(
+                                                          border:
+                                                              InputBorder.none,
                                                           hintText: '0',
-                                                          hintStyle: TextStyle(color: Colors.blue),
+                                                          hintStyle: TextStyle(
+                                                              color:
+                                                                  Colors.blue),
                                                         ),
                                                       ),
                                                     ),
@@ -396,10 +462,10 @@ class _ScreenInformationState extends State<ScreenInformation> {
                   // === カードここまで ===
 
                   const SizedBox(width: 20),
-                  
+
                   // 登録ボタン
                   RotatedBox(
-                    quarterTurns: 0, 
+                    quarterTurns: 0,
                     child: SizedBox(
                       width: 100,
                       height: 50,
@@ -412,7 +478,8 @@ class _ScreenInformationState extends State<ScreenInformation> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        child: const Text('登録', style: TextStyle(fontWeight: FontWeight.bold)),
+                        child: const Text('登録',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ),
@@ -449,7 +516,8 @@ class _ScreenInformationState extends State<ScreenInformation> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(icon, color: Colors.grey, size: 24),
-                  Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                  Text(label,
+                      style: const TextStyle(fontSize: 10, color: Colors.grey)),
                 ],
               ),
       ),
@@ -473,7 +541,8 @@ class _ScreenInformationState extends State<ScreenInformation> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         border: const OutlineInputBorder(),
         suffixIcon: const Icon(Icons.arrow_drop_down, size: 18),
-        suffixIconConstraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+        suffixIconConstraints:
+            const BoxConstraints(minWidth: 24, minHeight: 24),
       ),
     );
   }
