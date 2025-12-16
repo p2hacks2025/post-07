@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
+import 'dart:async';
 
 import 'screen_profile.dart';
 import 'screen_map.dart';
 import 'screen_birthday.dart';
 import 'screen_achieve.dart';
 import 'screen_park.dart';
+import 'screen_encounter.dart';
 
 
 void main() {
@@ -19,13 +23,124 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // カスタムサービスUUID
+  static const String customServiceUuid = '0000FFF0-0000-1000-8000-00805f9b34fb';
+  
   int _selectedIndex = 0; // 現在真ん中にあるアイコンの番号
   late PageController _pageController;
+  Timer? _scanTimer;
+  bool _isScanning = false;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _selectedIndex, viewportFraction: 0.1);
+    
+    // BLE広告を開始
+    _startBleAdvertising();
+    
+    // 繰り返しスキャンを開始
+    _startRepeatingScan();
+  }
+
+  @override
+  void dispose() {
+    _scanTimer?.cancel();
+    FlutterBluePlus.stopScan();
+    _stopBleAdvertising();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  // 繰り返しスキャンを開始
+  void _startRepeatingScan() {
+    _startBleScan();
+  }
+
+  // BLEスキャンを開始
+  Future<void> _startBleScan() async {
+    if (_isScanning) return;
+    
+    _isScanning = true;
+    
+    try {
+      // カスタムサービスUUIDでフィルタリングしてスキャン開始
+      await FlutterBluePlus.startScan(
+        withServices: [Guid(customServiceUuid)],
+        timeout: const Duration(seconds: 5),
+      );
+
+      // スキャン結果をリッスン
+      FlutterBluePlus.scanResults.listen((results) async {
+        if (results.isNotEmpty && mounted) {
+          // デバイスを検知したらスキャンを停止
+          await FlutterBluePlus.stopScan();
+          _isScanning = false;
+          
+          // すれ違い成功画面へ遷移
+          if (mounted) {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ScreenEncounter()),
+            );
+          }
+          
+          // 画面から戻ってきたら、5秒後に再度スキャン開始
+          if (mounted) {
+            await Future.delayed(const Duration(seconds: 5));
+            _startRepeatingScan();
+          }
+        }
+      });
+
+      // タイムアウト後も5秒待機して再スキャン
+      await Future.delayed(const Duration(seconds: 5));
+      if (_isScanning && mounted) {
+        await FlutterBluePlus.stopScan();
+        _isScanning = false;
+      }
+      
+      if (mounted) {
+        await Future.delayed(const Duration(seconds: 5));
+        _startRepeatingScan();
+      }
+    } catch (e) {
+      print('BLEスキャンエラー: $e');
+      _isScanning = false;
+      
+      // エラーが発生しても5秒後に再試行
+      if (mounted) {
+        await Future.delayed(const Duration(seconds: 5));
+        _startRepeatingScan();
+      }
+    }
+  }
+
+  // BLE広告を開始
+  Future<void> _startBleAdvertising() async {
+    try {
+      final FlutterBlePeripheral blePeripheral = FlutterBlePeripheral();
+      
+      final AdvertiseData advertiseData = AdvertiseData(
+        serviceUuid: customServiceUuid,
+        includePowerLevel: true,
+      );
+
+      await blePeripheral.start(advertiseData: advertiseData);
+      print('BLE広告開始: $customServiceUuid');
+    } catch (e) {
+      print('BLE広告エラー: $e');
+    }
+  }
+
+  // BLE広告を停止
+  Future<void> _stopBleAdvertising() async {
+    try {
+      final FlutterBlePeripheral blePeripheral = FlutterBlePeripheral();
+      await blePeripheral.stop();
+    } catch (e) {
+      print('BLE広告停止エラー: $e');
+    }
   }
 
   // メニューのデータ
