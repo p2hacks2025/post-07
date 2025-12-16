@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http; 
 
-// ★ここに遷移先のファイルをインポートしてください
 import 'home_screen.dart'; 
 
 class ScreenInformation extends StatefulWidget {
@@ -17,9 +17,8 @@ class _ScreenInformationState extends State<ScreenInformation> {
   final _triviaController = TextEditingController();
   final _birthdayController = TextEditingController();
   final _birthplaceController = TextEditingController();
-  final _heeController = TextEditingController(); // 初期値は0に設定などを推奨
+  final _heeController = TextEditingController(); 
 
-  // トリビア入力欄を強制的に操作するための「フォーカスノード」
   final FocusNode _triviaFocusNode = FocusNode();
 
   File? _profileImage;
@@ -30,7 +29,6 @@ class _ScreenInformationState extends State<ScreenInformation> {
   @override
   void initState() {
     super.initState();
-    // 「へぇ」の初期値を0にしておく
     _heeController.text = "0";
   }
 
@@ -193,9 +191,7 @@ class _ScreenInformationState extends State<ScreenInformation> {
     );
   }
 
-  // ★変更点：保存して画面遷移する処理
   Future<void> _saveProfile() async {
-    // バリデーション（入力チェック）が必要ならここに書きます
     if (_nicknameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('ニックネームを入力してください')),
@@ -203,30 +199,71 @@ class _ScreenInformationState extends State<ScreenInformation> {
       return;
     }
 
-    // 保存完了メッセージ
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('保存しました！ホームへ移動します'),
-        duration: Duration(seconds: 1),
-      ),
+      const SnackBar(content: Text('サーバーに送信中...')),
     );
 
-    // 少し待ってから画面遷移（ユーザーにメッセージを読ませるため）
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final uri = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/');
 
-    if (!mounted) return; // 画面がまだ存在しているかチェック
+      var request = http.MultipartRequest('POST', uri);
 
-    // ★HomeScreenへ移動（戻るボタンで戻れないように pushReplacement を使用）
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
-    );
+      request.fields['nickname'] = _nicknameController.text;
+      request.fields['birthday'] = _birthdayController.text;
+      request.fields['birthplace'] = _birthplaceController.text;
+      request.fields['trivia'] = _triviaController.text;
+      request.fields['hee_count'] = _heeController.text;
+
+      if (_profileImage != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'profile_image',
+          _profileImage!.path,
+        ));
+      }
+      if (_triviaAiImage != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'trivia_ai_image',
+          _triviaAiImage!.path,
+        ));
+      }
+
+      print('送信開始: $uri');
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('ステータスコード: ${response.statusCode}');
+      print('サーバーからの返事: ${response.body}');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('登録成功！ホームへ移動します')),
+        );
+
+        await Future.delayed(const Duration(seconds: 1));
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('エラーが発生しました: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      print('通信エラー詳細: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('サーバーに接続できませんでした')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final Size screenSize = MediaQuery.of(context).size;
 
-    // === 横持ち用サイズ計算 ===
     double cardHeight = screenSize.height * 0.9;
     double cardWidth = cardHeight * 1.58;
 
@@ -251,7 +288,6 @@ class _ScreenInformationState extends State<ScreenInformation> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // === カード本体 ===
                   SizedBox(
                     width: cardWidth,
                     height: cardHeight,
@@ -272,9 +308,10 @@ class _ScreenInformationState extends State<ScreenInformation> {
                         padding: const EdgeInsets.all(12.0),
                         child: Column(
                           children: [
-                            // ニックネーム
+                            // ニックネーム入力 (修正：onChanged追加)
                             TextFormField(
                               controller: _nicknameController,
+                              onChanged: (value) => setState(() {}),
                               style: const TextStyle(
                                   fontSize: 16, fontWeight: FontWeight.bold),
                               decoration: const InputDecoration(
@@ -287,12 +324,10 @@ class _ScreenInformationState extends State<ScreenInformation> {
                             ),
                             const SizedBox(height: 8),
 
-                            // コンテンツエリア
                             Expanded(
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  // 左側：写真エリア
                                   Expanded(
                                     flex: 4,
                                     child: Column(
@@ -319,7 +354,6 @@ class _ScreenInformationState extends State<ScreenInformation> {
                                   ),
                                   const SizedBox(width: 8),
 
-                                  // 右側：入力エリア
                                   Expanded(
                                     flex: 6,
                                     child: Column(
@@ -337,13 +371,11 @@ class _ScreenInformationState extends State<ScreenInformation> {
                                         ),
                                         const SizedBox(height: 4),
 
-                                        // トリビア入力エリア
                                         Expanded(
                                           child: Row(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.stretch,
                                             children: [
-                                              // トリビア入力
                                               Expanded(
                                                 flex: 7,
                                                 child: GestureDetector(
@@ -369,6 +401,9 @@ class _ScreenInformationState extends State<ScreenInformation> {
                                                           _triviaController,
                                                       focusNode:
                                                           _triviaFocusNode,
+                                                      // 修正：onChanged追加
+                                                      onChanged: (value) =>
+                                                          setState(() {}),
                                                       keyboardType:
                                                           TextInputType.multiline,
                                                       textInputAction:
@@ -396,7 +431,6 @@ class _ScreenInformationState extends State<ScreenInformation> {
                                               ),
                                               const SizedBox(width: 8),
 
-                                              // ★変更点：へぇ数 (入力不可に修正)
                                               Container(
                                                 width: 60,
                                                 decoration: BoxDecoration(
@@ -415,7 +449,7 @@ class _ScreenInformationState extends State<ScreenInformation> {
                                                       child: TextField(
                                                         controller:
                                                             _heeController,
-                                                        readOnly: true, // ★ここを追加：入力不可にする
+                                                        readOnly: true, 
                                                         textAlign:
                                                             TextAlign.center,
                                                         style: const TextStyle(
@@ -459,11 +493,9 @@ class _ScreenInformationState extends State<ScreenInformation> {
                       ),
                     ),
                   ),
-                  // === カードここまで ===
 
                   const SizedBox(width: 20),
 
-                  // 登録ボタン
                   RotatedBox(
                     quarterTurns: 0,
                     child: SizedBox(
