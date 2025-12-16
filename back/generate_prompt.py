@@ -10,7 +10,7 @@ def henerateImagefromtrivia(trivia):
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY is not set")
     
-    url = "https://17413e299b41.ngrok-free.app/sdapi/v1/txt2img"
+    url = "https://4c79283d5ee6.ngrok-free.app/sdapi/v1/txt2img"
 
     genai.configure(api_key=api_key)
 
