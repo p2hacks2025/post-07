@@ -11,6 +11,13 @@
             "type": "dart"
         },
         {
+            "name": "my_app (Flutter Pixel 7)",
+            "cwd": "front\\my_app",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart"
+        },
+        {
             "name": "my_app (profile mode)",
             "cwd": "front\\my_app",
             "request": "launch",
