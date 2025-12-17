@@ -204,7 +204,7 @@ class _ScreenInformationState extends State<ScreenInformation> {
     );
 
     try {
-      final uri = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/');
+      final uri = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/save_profile');
 
       var request = http.MultipartRequest('POST', uri);
 
