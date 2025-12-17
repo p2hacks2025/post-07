@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+// ★追加：日本語対応のために必要です
+import 'package:flutter_localizations/flutter_localizations.dart'; 
+
 // ▼ データを読み込むために必要です
 import 'package:shared_preferences/shared_preferences.dart';
 
 // 実際のファイル構成に合わせてimportを確認してください
 import 'screens/home_screen.dart'; 
-import 'screens/screen_information.dart'; // ← これを追加（登録画面）
+import 'screens/screen_information.dart'; 
 import 'screens/screen_birthday.dart'; 
 
 void main() async {
@@ -41,6 +44,18 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Template',
+      
+      // ★★★ ここが日本語入力対応のための追加部分です ★★★
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('ja', 'JP'), // 日本語を設定
+      ],
+      // ★★★ ここまで ★★★
+
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
