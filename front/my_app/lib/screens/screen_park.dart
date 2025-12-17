@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:model_viewer_plus/model_viewer_plus.dart';
+import 'dart:math' as math;
+import 'dart:ui';
+
 
 class ScreenEleven extends StatefulWidget {
   const ScreenEleven({super.key});
@@ -40,7 +44,7 @@ class _ScreenElevenState extends State<ScreenEleven>
     _positionAnimation = Tween<double>(begin: 1.0, end: 0.5).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeInOut),
+        curve: Curves.easeInOut,
       ),
     );
 
@@ -129,9 +133,28 @@ class _ScreenElevenState extends State<ScreenEleven>
         animation: Listenable.merge([_controller, _exitController]),
         builder: (context, child) {
           // 現在の位置を計算
-          double currentPosition = _isExiting 
-              ? _exitPositionAnimation.value 
-              : _positionAnimation.value;
+        final double t = _controller.value; // 0.0 → 1.0
+
+            // ===== 横移動（右 → 中央）=====
+            // 現在の横位置
+              final double x = _isExiting
+                  ? _exitPositionAnimation.value   // 中央 → 左
+                  : _positionAnimation.value;      // 右 → 中央
+
+
+            // ===== ジャンプ（2回）=====
+       
+
+          const int jumpCount = 2;
+          const double jumpHeight = 80;
+
+          final double y = !_isExiting
+              ? math.sin(2 * math.pi * jumpCount * t) * jumpHeight
+              : 0;
+
+          final double jumpY = math.max(0, y);
+
+
 
           return Stack(
             children: [
@@ -196,6 +219,7 @@ class _ScreenElevenState extends State<ScreenEleven>
                               ),
                             ],
                           ),
+
                           child: Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -305,84 +329,112 @@ class _ScreenElevenState extends State<ScreenEleven>
                   ),
                 ),
 
-              // 人のキャラクター
-              if (!_showBoard)
+              // // 人のキャラクター
+              // if (!_showBoard)
+              //   Positioned(
+              //     left: MediaQuery.of(context).size.width * currentPosition - 200,
+              //     bottom: -250,
+              //     child: Column(
+              //       children: [
+              //         // 人の頭
+              //         Container(
+              //           width: 180,
+              //           height: 180,
+              //           decoration: const BoxDecoration(
+              //             color: Colors.brown,
+              //             shape: BoxShape.circle,
+              //           ),
+              //         ),
+              //         // 人の体
+              //         Container(
+              //           width: 220,
+              //           height: 350,
+              //           decoration: BoxDecoration(
+              //             color: Colors.blue[700],
+              //             borderRadius: BorderRadius.circular(30),
+              //           ),
+              //         ),
+              //         const SizedBox(height: 20),
+              //         // 赤いボードと手
+              //         Stack(
+              //           clipBehavior: Clip.none,
+              //           children: [
+              //             // 赤いボード
+              //             Container(
+              //               width: 280,
+              //               height: 350,
+              //               decoration: BoxDecoration(
+              //                 color: Colors.red,
+              //                 borderRadius: BorderRadius.circular(20),
+              //                 border: Border.all(color: Colors.black, width: 6),
+              //               ),
+              //               child: const Center(
+              //                 child: Icon(
+              //                   Icons.notification_important,
+              //                   color: Colors.white,
+              //                   size: 140,
+              //                 ),
+              //               ),
+              //             ),
+              //             // 左手
+              //             Positioned(
+              //               left: -35,
+              //               top: 20,
+              //               child: Container(
+              //                 width: 70,
+              //                 height: 70,
+              //                 decoration: BoxDecoration(
+              //                   color: Colors.brown[300],
+              //                   shape: BoxShape.circle,
+              //                 ),
+              //               ),
+              //             ),
+              //             // 右手
+              //             Positioned(
+              //               right: -35,
+              //               top: 20,
+              //               child: Container(
+              //                 width: 70,
+              //                 height: 70,
+              //                 decoration: BoxDecoration(
+              //                   color: Colors.brown[300],
+              //                   shape: BoxShape.circle,
+              //                 ),
+              //               ),
+              //             ),
+              //           ],
+              //         ),
+              //       ],
+              //     ),
+              //   ),
+
+              // 3Dキャラクター
+                if (!_showBoard)
                 Positioned(
-                  left: MediaQuery.of(context).size.width * currentPosition - 200,
-                  bottom: -250,
-                  child: Column(
-                    children: [
-                      // 人の頭
-                      Container(
-                        width: 180,
-                        height: 180,
-                        decoration: const BoxDecoration(
-                          color: Colors.brown,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      // 人の体
-                      Container(
-                        width: 220,
-                        height: 350,
-                        decoration: BoxDecoration(
-                          color: Colors.blue[700],
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      // 赤いボードと手
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          // 赤いボード
-                          Container(
-                            width: 280,
-                            height: 350,
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.black, width: 6),
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.notification_important,
-                                color: Colors.white,
-                                size: 140,
-                              ),
-                            ),
-                          ),
-                          // 左手
-                          Positioned(
-                            left: -35,
-                            top: 20,
-                            child: Container(
-                              width: 70,
-                              height: 70,
-                              decoration: BoxDecoration(
-                                color: Colors.brown[300],
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                          // 右手
-                          Positioned(
-                            right: -35,
-                            top: 20,
-                            child: Container(
-                              width: 70,
-                              height: 70,
-                              decoration: BoxDecoration(
-                                color: Colors.brown[300],
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                 left: MediaQuery.of(context).size.width * x - 150,
+                  bottom: -50 + jumpY,
+                  child: SizedBox(
+                    width: 300,
+                    height: 500,
+                    child: ModelViewer(
+                      src: 'assets/models/p2hacks2025_catgirl.glb',
+                      autoRotate: false,
+                      cameraControls: false,
+                      disableZoom: true,
+
+                      // ⚠ animationName は一旦消す（後で説明）
+                      // animationName: _isExiting ? 'exit' : 'enter',
+
+                      backgroundColor: Colors.white,
+                      environmentImage: 'neutral',
+                    ),
                   ),
                 ),
+
+
+                 
+
+
             ],
           );
         },
