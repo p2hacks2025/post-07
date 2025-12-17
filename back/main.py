@@ -4,27 +4,14 @@ from pydantic import BaseModel
 import os
 import base64
 import requests
-from dotenv import load_dotenv
-import google.generativeai as genai
 
 # =====================
-# 初期化
+# SD API URL
 # =====================
-load_dotenv(override=True)
+TXT2IMG_API_URL = "http://127.0.0.1:7860/sdapi/v1/txt2img"
+IMG2IMG_API_URL = "http://127.0.0.1:7860/sdapi/v1/img2img"
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    raise RuntimeError("GEMINI_API_KEY is not set")
-
-genai.configure(api_key=GEMINI_API_KEY)
-
-SD_API_URL = "http://127.0.0.1:7860/sdapi/v1/txt2img"
-
-app = FastAPI(
-    title="Trivia → Image API",
-    description="Gemini + Stable Diffusion via FastAPI",
-    version="1.0.0"
-)
+app = FastAPI(title="Trivia → Image API")
 
 # =====================
 # リクエストモデル
@@ -35,6 +22,14 @@ class GenerateRequest(BaseModel):
     width: int = 512
     height: int = 512
 
+class Img2ImgRequest(BaseModel):
+    prompt: str                 # 直接ユーザー指定プロンプト
+    input_image_path: str       # サーバーにある画像パス
+    steps: int = 35
+    width: int = 512
+    height: int = 512
+    denoising_strength: float = 0.55
+
 # =====================
 # ヘルスチェック
 # =====================
@@ -42,27 +37,17 @@ class GenerateRequest(BaseModel):
 def health():
     return {"status": "ok"}
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
 # =====================
-# メインAPI
+# txt2img
 # =====================
 @app.post("/generate-image")
 def generate_image(req: GenerateRequest):
-    # ---- Geminiでプロンプト生成 ----
-    model = genai.GenerativeModel("models/gemini-2.5-flash")
-
-    response = model.generate_content(
-        req.trivia + "\n以下のルールに従ってください：\n"
-        "・出力は1行のテキストのみ\n"
-        "・余計な文章や返事は一切不要\n"
-        "・コンマ区切りの英単語でAIにコピペ可能な形\n"
-        "・必ず以下の単語を含める：Hand-drawn, Deformed, Pastel colors"
-    )
-
-    prompt = response.text.strip()
-
-    # ---- Stable Diffusion ----
     payload = {
-        "prompt": prompt,
+        "prompt": req.trivia,
         "negative_prompt": (
             "low quality, worst quality, blurry, grainy, pixelated, jpeg artifacts,"
             " bad anatomy, deformed, extra limbs, missing limbs, wrong hands,"
@@ -75,18 +60,47 @@ def generate_image(req: GenerateRequest):
     }
 
     try:
-        r = requests.post(SD_API_URL, json=payload, timeout=180)
+        r = requests.post(TXT2IMG_API_URL, json=payload, timeout=180)
         r.raise_for_status()
         img_base64 = r.json()["images"][0]
         img_bytes = base64.b64decode(img_base64)
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Image generation failed: {e}"
-        )
+        raise HTTPException(status_code=500, detail=f"Image generation failed: {e}")
 
-    # ---- PNG をそのまま返す ----
-    return Response(
-        content=img_bytes,
-        media_type="image/png"
-    )
+    return Response(content=img_bytes, media_type="image/png")
+
+# =====================
+# img2img
+# =====================
+@app.post("/generate-img2img")
+def generate_img2img(req: Img2ImgRequest):
+    if not os.path.exists(req.input_image_path):
+        raise HTTPException(status_code=400, detail="Input image not found")
+
+    # 入力画像をbase64化
+    with open(req.input_image_path, "rb") as f:
+        init_img = base64.b64encode(f.read()).decode("utf-8")
+
+    payload = {
+        "init_images": [init_img],
+        "prompt": req.prompt,
+        "negative_prompt": (
+            "low quality, worst quality, blurry, grainy, pixelated, jpeg artifacts, "
+            "bad anatomy, extra limbs, missing limbs, wrong hands, malformed face, "
+            "text, logo, watermark, signature, username, nsfw, nudity, gore, violence"
+        ),
+        "denoising_strength": req.denoising_strength,
+        "steps": req.steps,
+        "width": req.width,
+        "height": req.height
+    }
+
+    try:
+        r = requests.post(IMG2IMG_API_URL, json=payload, timeout=180)
+        r.raise_for_status()
+        img_base64 = r.json()["images"][0]
+        img_bytes = base64.b64decode(img_base64)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Img2Img generation failed: {e}")
+
+    return Response(content=img_bytes, media_type="image/png")
