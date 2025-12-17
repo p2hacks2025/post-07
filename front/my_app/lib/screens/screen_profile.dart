@@ -298,7 +298,8 @@ class _ScreenProfileState extends State<ScreenProfile> {
     if (_formKey.currentState!.validate()) {
       try {
         // APIのエンドポイントURL（ご自身のサーバーURLに変更してください）
-        final url = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/save_profile');
+        final url1 = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/save_profile');
+        final url2 = Uri.parse('https://saliently-multiciliated-jacqui.ngrok-free.dev/generate-image');
         
         // 送信するデータ
         final data = {
@@ -316,7 +317,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
         
         // POSTリクエストを送信
         final response = await http.post(
-          url,
+          url1,
           headers: {
             'Content-Type': 'application/json',
             'ngrok-skip-browser-warning': 'true',
