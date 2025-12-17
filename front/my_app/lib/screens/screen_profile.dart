@@ -198,6 +198,9 @@ class _ScreenProfileState extends State<ScreenProfile> {
         const SnackBar(content: Text('保存中...')),
       );
       
+      print('送信データ: $data');
+      print('送信先URL: $url');
+      
       // POSTリクエストを送信
       final response = await http.post(
         url,
@@ -210,24 +213,36 @@ class _ScreenProfileState extends State<ScreenProfile> {
       
       if (!mounted) return;
       
+      print('レスポンスステータス: ${response.statusCode}');
+      print('レスポンスボディ: ${response.body}');
+      
       // レスポンスの確認
       if (response.statusCode == 200) {
         // 成功した場合
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('プロフィールを保存しました')),
+          const SnackBar(content: Text('プロフィールを保存しました'), backgroundColor: Colors.green),
         );
         Navigator.pop(context);
       } else {
         // エラーが発生した場合
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存に失敗しました: ${response.statusCode}')),
+          SnackBar(
+            content: Text('保存に失敗しました: ${response.statusCode}'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
     } catch (e) {
       // ネットワークエラーなどの例外処理
       if (!mounted) return;
+      print('エラー: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('エラーが発生しました: $e')),
+        SnackBar(
+          content: Text('接続エラー: サーバーに接続できません\nエラー詳細: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
       );
     }
   }
