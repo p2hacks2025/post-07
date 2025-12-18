@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:model_viewer_plus/model_viewer_plus.dart';
+import 'package:flutter_3d_controller/flutter_3d_controller.dart';
 import 'dart:math' as math;
-import '../services/profile_service.dart';
-import '../models/trivia_card.dart';
 
 class ScreenEleven extends StatefulWidget {
   const ScreenEleven({super.key});
@@ -30,36 +28,25 @@ class _ScreenElevenState extends State<ScreenEleven>
   final int _totalCards = 3;
   final int _maxHeeCount = 20;
   final List<int> _heeCounts = [0, 0, 0];
-  final ProfileService _profileService = ProfileService();
 
-  // デモ用のカード情報
-  final List<Map<String, String>> _cardData = [
-    {
-      'title': 'トリビアカード1',
-      'content': 'コーヒーは世界で最も取引されている商品の一つです',
-    },
-    {
-      'title': 'トリビアカード2',
-      'content': '人間の脳は約860億個のニューロンで構成されています',
-    },
-    {
-      'title': 'トリビアカード3',
-      'content': '地球上で最も深い場所はマリアナ海溝で約11,000mの深さです',
-    },
-  ];
+  // 3Dモデル用コントローラ
+  late Flutter3DController _modelController;
+  bool _modelLoaded = false;
 
   @override
   void initState() {
     super.initState();
 
-    // 登場（右 → 中央）
+    _modelController = Flutter3DController();
+
+    // 登場アニメーション
     _enterController =
         AnimationController(vsync: this, duration: const Duration(seconds: 2));
     _enterX = Tween<double>(begin: 1.2, end: 0.5).animate(
       CurvedAnimation(parent: _enterController, curve: Curves.easeInOut),
     );
 
-    // 退場（中央 → 左）
+    // 退場アニメーション
     _exitController =
         AnimationController(vsync: this, duration: const Duration(seconds: 2));
     _exitX = Tween<double>(begin: 0.5, end: -0.5).animate(
@@ -82,7 +69,13 @@ class _ScreenElevenState extends State<ScreenEleven>
       }
     });
 
-    _enterController.forward();
+    // タイムアウト保険：0.4秒後にまだロードされていなければ強制開始
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (!_modelLoaded) {
+        _modelLoaded = true;
+        _enterController.forward();
+      }
+    });
   }
 
   @override
@@ -90,35 +83,21 @@ class _ScreenElevenState extends State<ScreenEleven>
     _enterController.dispose();
     _exitController.dispose();
     _pageController.dispose();
+    // _modelController.dispose(); // Flutter3DController は自動で解放されるので不要
     super.dispose();
   }
 
-  void _onCardComplete(int index) async {
-    // カード情報を保存
-    final card = TriviaCard(
-      id: 'card_${DateTime.now().millisecondsSinceEpoch}_$index',
-      title: _cardData[index]['title']!,
-      content: _cardData[index]['content']!,
-      heeCount: _heeCounts[index],
-      completedAt: DateTime.now(),
-    );
-    
-    await _profileService.saveDisplayedCard(card);
-    print('カードを保存しました: ${card.title}');
-
-    // 次のカードへ or 退場
-    if (mounted) {
-      if (index < _totalCards - 1) {
-        _pageController.nextPage(
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeOut,
-        );
-      } else {
-        setState(() {
-          _phase = Phase.exiting;
-        });
-        _exitController.forward();
-      }
+  void _onCardComplete(int index) {
+    if (index < _totalCards - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
+      );
+    } else {
+      setState(() {
+        _phase = Phase.exiting;
+      });
+      _exitController.forward();
     }
   }
 
@@ -133,11 +112,10 @@ class _ScreenElevenState extends State<ScreenEleven>
         animation: Listenable.merge([_enterController, _exitController]),
         builder: (context, _) {
           final t = _enterController.value;
-
-          final double x = _phase == Phase.exiting ? _exitX.value : _enterX.value;
-
+          final double x =
+              _phase == Phase.exiting ? _exitX.value : _enterX.value;
           final double jumpY = _phase == Phase.entering
-              ? math.max(0, math.sin(2*3 * math.pi * 2 * t) * 80)
+              ? math.max(0, math.sin(2 * 3 * math.pi * 2 * t) * 80)
               : 0;
 
           return Stack(
@@ -151,16 +129,43 @@ class _ScreenElevenState extends State<ScreenEleven>
                 child: SizedBox(
                   width: 300,
                   height: 500,
-                  child: ModelViewer(
+                  child: Flutter3DViewer(
+                    controller: _modelController,
                     src: 'assets/models/p2hacks2025_catgirl.glb',
-                    autoRotate: false,
-                    cameraControls: false,
-                    disableZoom: true,
-                    backgroundColor: Colors.white,
-                    environmentImage: 'neutral',
+
+                    // 読み込み進捗
+                    onProgress: (double progressValue) {
+                      if (!_modelLoaded && progressValue >= 1.0) {
+                        _modelLoaded = true;
+                        _enterController.forward();
+                      }
+                      debugPrint('loading: $progressValue');
+                    },
+
+                    // ロード完了時
+                    onLoad: (String modelPath) {
+                      if (!_modelLoaded) {
+                        _modelLoaded = true;
+                        _enterController.forward();
+                      }
+                    },
+
+                    // ロード失敗時
+                    onError: (String error) {
+                      debugPrint('Error loading model: $error');
+                      // 保険としてロード失敗でも進める
+                      if (!_modelLoaded) {
+                        _modelLoaded = true;
+                        _enterController.forward();
+                      }
+                    },
                   ),
                 ),
               ),
+
+              // ロード中インジケータ
+              if (!_modelLoaded)
+                const Center(child: CircularProgressIndicator()),
 
               // 中央カード表示
               if (_phase == Phase.showing)
@@ -199,7 +204,8 @@ class _ScreenElevenState extends State<ScreenEleven>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.notifications_active, size: 100, color: Colors.white),
+            const Icon(Icons.notifications_active,
+                size: 100, color: Colors.white),
             const SizedBox(height: 20),
             Text(
               'カード ${index + 1}',
@@ -207,19 +213,6 @@ class _ScreenElevenState extends State<ScreenEleven>
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30),
-              child: Text(
-                _cardData[index]['content']!,
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.white,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
               ),
             ),
             const SizedBox(height: 40),
