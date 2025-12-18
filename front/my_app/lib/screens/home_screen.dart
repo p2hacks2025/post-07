@@ -31,6 +31,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  StreamSubscription? _scanSubscription;  // BLEスキャン用
+  FlutterBlePeripheral _blePeripheral = FlutterBlePeripheral();
+
   // カスタムサービスUUID
   static const String customServiceUuid =
       '0000FFF0-0000-1000-8000-00805f9b34fb';
@@ -161,7 +164,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _scanTimer?.cancel();
     FlutterBluePlus.stopScan();
     _stopBleAdvertising();
+    _scanSubscription?.cancel(); // スキャン購読をキャンセル
     _pageController.dispose();
+    _blePeripheral.stop();
     super.dispose();
   }
 
@@ -457,17 +462,7 @@ class _HomeScreenState extends State<HomeScreen> {
     },
   ];
 
-  @override
-  void dispose() {
-    _scanSubscription?.cancel(); // スキャン購読をキャンセル
-    FlutterBluePlus.stopScan(); // スキャンを停止
-    
-    // BLE広告を停止
-    _blePeripheral.stop();
-    
-    _pageController.dispose();
-    super.dispose();
-  }
+
 
   // アイコンをタップしたときの処理
   void _onIconTapped(int index) {
@@ -643,13 +638,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   
                   // ホームのタイトル部分（下半分）
-                  const Text(
-                    'ホーム',
-                    style: TextStyle(
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [Shadow(blurRadius: 10, color: Colors.black45)],
+                  Text(
+                  'ホーム',
+                  style: TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    shadows: [Shadow(blurRadius: 10, color: Colors.black45)],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // ここにGridView.builderを追加
+                Expanded(
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(12),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      childAspectRatio: 2.5,
+                      crossAxisSpacing: 6,
+                      mainAxisSpacing: 6,
                     ),
                     itemCount: _profiles.length,
                     itemBuilder: (context, index) {
@@ -657,7 +665,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       return Card(
                         elevation: 2,
                         color: profile['color'],
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
                           onTap: () => _showProfileDetail(profile),
@@ -669,19 +679,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Icon(profile['icon'], color: Colors.black54),
                               ),
                               const SizedBox(height: 8),
-                              // ■■■ 修正：カードの表示内容も更新 ■■■
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
-                                child: Text(
-                                  profile['nickname'], // ニックネーム
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                              Text(
+                                profile['nickname'],
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               Text(
-                                profile['birthplace'], // 出身地
+                                profile['birthplace'],
                                 style: const TextStyle(fontSize: 11, color: Colors.black54),
                               ),
                             ],
@@ -690,6 +696,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     },
                   ),
+                ),
                   const SizedBox(height: 10),
                   const Icon(Icons.home_rounded, size: 60, color: Colors.white),
                   const SizedBox(height: 100), // アイコンとかぶらないための余白
