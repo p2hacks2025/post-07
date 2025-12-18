@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python,unity,node
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,unity,node
 
+#データベースの暗号キー
+serviceAccountKey.json
+
 ### Node ###
 # Logs
 logs
@@ -382,5 +385,8 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+back/firebase/p2hacks.json
+
 
 # End of https://www.toptal.com/developers/gitignore/api/python,unity,node

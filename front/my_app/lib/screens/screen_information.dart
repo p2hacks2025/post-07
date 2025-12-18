@@ -1,30 +1,26 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import '../services/profile_service.dart';
-import '../models/profile.dart';
-import '../models/encounter.dart';
+import 'home_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class ScreenProfile extends StatefulWidget {
-  const ScreenProfile({super.key});
+
+class ScreenInformation extends StatefulWidget {
+  const ScreenInformation({super.key});
 
   @override
-  State<ScreenProfile> createState() => _ScreenProfileState();
+  State<ScreenInformation> createState() => _ScreenInformationState();
 }
 
-class _ScreenProfileState extends State<ScreenProfile> {
+class _ScreenInformationState extends State<ScreenInformation> {
   final _nicknameController = TextEditingController();
   final _triviaController = TextEditingController();
   final _birthdayController = TextEditingController();
   final _birthplaceController = TextEditingController();
   final _heeController = TextEditingController();
 
-  // トリビア入力欄を強制的に操作するための「フォーカスノード」
+  // ★追加：トリビア入力欄を強制的に操作するための「フォーカスノード」
   final FocusNode _triviaFocusNode = FocusNode();
-  
-  final ProfileService _profileService = ProfileService();
 
   File? _profileImage;
   File? _triviaAiImage;
@@ -38,7 +34,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
     _birthdayController.dispose();
     _birthplaceController.dispose();
     _heeController.dispose();
-    _triviaFocusNode.dispose();
+    _triviaFocusNode.dispose(); // ★忘れず破棄
     super.dispose();
   }
 
@@ -185,90 +181,13 @@ class _ScreenProfileState extends State<ScreenProfile> {
   }
 
   Future<void> _saveProfile() async {
-    try {
-      // APIのエンドポイントURL
-      final url = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/save_profile');
-      
-      // 送信するデータ
-      final data = {
-        'nickname': _nicknameController.text,
-        'birthday': _birthdayController.text,
-        'birthplace': _birthplaceController.text,
-        'trivia': _triviaController.text,
-      };
-      
-      // API呼び出し（ローディング表示）
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('保存中...')),
-      );
-      
-      print('送信データ: $data');
-      print('送信先URL: $url');
-      
-      // POSTリクエストを送信
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: jsonEncode(data),
-      );
-      
-      if (!mounted) return;
-      
-      print('レスポンスステータス: ${response.statusCode}');
-      print('レスポンスボディ: ${response.body}');
-      
-      // レスポンスの確認
-      if (response.statusCode == 200) {
-        // サーバーへの保存成功後、ローカルにも保存
-        final profile = Profile(
-          profileId: _profileService.generateProfileId(),
-          nickname: _nicknameController.text,
-          birthday: _birthdayController.text,
-          hometown: _birthplaceController.text,
-          trivia: _triviaController.text,
-        );
-        await _profileService.saveMyProfile(profile);
-        
-        // すれ違い履歴にも自分のプロフィールを追加
-        final myEncounter = Encounter(
-          profile: profile,
-          encounterTime: DateTime.now(),
-        );
-        await _profileService.saveEncounter(myEncounter);
-        print('✅ 自分のプロフィールをすれ違い履歴に追加しました');
-        
-        // 成功した場合
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('プロフィールを保存しました'), backgroundColor: Colors.green),
-        );
-        Navigator.pop(context);
-      } else {
-        // エラーが発生した場合
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('保存に失敗しました: ${response.statusCode}'),
-            backgroundColor: Colors.orange,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    } catch (e) {
-      // ネットワークエラーなどの例外処理
-      if (!mounted) return;
-      print('エラー: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('接続エラー: サーバーに接続できません\nエラー詳細: $e'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
-        ),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存しました')));
+    
+    // HomeScreenに遷移
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
+    );
   }
 
   @override
@@ -386,7 +305,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
                                         ),
                                         const SizedBox(height: 4),
 
-                                        // トリビア入力
+                                        // ★修正：トリビア入力（onPressedのアイデアを採用して強力に入力モードにする）
                                         Expanded(
                                           child: Row(
                                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -396,7 +315,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
                                                 flex: 7,
                                                 child: GestureDetector(
                                                   behavior: HitTestBehavior.opaque,
-                                                  // 枠全体をタップしたら強制的にキーボードを出す
+                                                  // ★ここがポイント：枠全体をタップしたら強制的にキーボードを出す
                                                   onTap: () {
                                                     FocusScope.of(context).requestFocus(_triviaFocusNode);
                                                   },
@@ -408,8 +327,10 @@ class _ScreenProfileState extends State<ScreenProfile> {
                                                     padding: const EdgeInsets.all(8),
                                                     child: TextField(
                                                       controller: _triviaController,
-                                                      focusNode: _triviaFocusNode,
+                                                      focusNode: _triviaFocusNode, // ★フォーカスノードを接続
                                                       maxLines: null,
+                                                      // expands: true は不具合の原因になりやすいので一旦オフにし、
+                                                      // Containerで高さを確保する方式に変更しました
                                                       expands: false, 
                                                       textAlignVertical: TextAlignVertical.top,
                                                       style: const TextStyle(fontSize: 14),
@@ -417,7 +338,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
                                                         labelText: 'トリビア',
                                                         labelStyle: TextStyle(fontSize: 10),
                                                         hintText: '豆知識...',
-                                                        border: InputBorder.none,
+                                                        border: InputBorder.none, // 枠線はContainerで描画
                                                         isDense: true,
                                                         contentPadding: EdgeInsets.zero,
                                                       ),
@@ -504,6 +425,33 @@ class _ScreenProfileState extends State<ScreenProfile> {
                       ),
                     ),
                   ),
+
+                  const SizedBox(height: 8),
+
+                    // 🧪 開発用：ホーム直行ボタン
+                    SizedBox(
+                      width: 100,
+                      height: 36,
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool('isRegistered', true);
+
+                          if (!mounted) return;
+                          Navigator.pushReplacementNamed(context, '/home');
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
+                          padding: EdgeInsets.zero,
+                        ),
+                        child: const Text(
+                          'DEV → HOME',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+
                 ],
               ),
             ),
