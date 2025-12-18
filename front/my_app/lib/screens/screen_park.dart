@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'dart:math' as math;
+import '../services/profile_service.dart';
+import '../models/trivia_card.dart';
 
 class ScreenEleven extends StatefulWidget {
   const ScreenEleven({super.key});
@@ -28,6 +30,23 @@ class _ScreenElevenState extends State<ScreenEleven>
   final int _totalCards = 3;
   final int _maxHeeCount = 20;
   final List<int> _heeCounts = [0, 0, 0];
+  final ProfileService _profileService = ProfileService();
+
+  // デモ用のカード情報
+  final List<Map<String, String>> _cardData = [
+    {
+      'title': 'トリビアカード1',
+      'content': 'コーヒーは世界で最も取引されている商品の一つです',
+    },
+    {
+      'title': 'トリビアカード2',
+      'content': '人間の脳は約860億個のニューロンで構成されています',
+    },
+    {
+      'title': 'トリビアカード3',
+      'content': '地球上で最も深い場所はマリアナ海溝で約11,000mの深さです',
+    },
+  ];
 
   @override
   void initState() {
@@ -74,17 +93,32 @@ class _ScreenElevenState extends State<ScreenEleven>
     super.dispose();
   }
 
-  void _onCardComplete(int index) {
-    if (index < _totalCards - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOut,
-      );
-    } else {
-      setState(() {
-        _phase = Phase.exiting;
-      });
-      _exitController.forward();
+  void _onCardComplete(int index) async {
+    // カード情報を保存
+    final card = TriviaCard(
+      id: 'card_${DateTime.now().millisecondsSinceEpoch}_$index',
+      title: _cardData[index]['title']!,
+      content: _cardData[index]['content']!,
+      heeCount: _heeCounts[index],
+      completedAt: DateTime.now(),
+    );
+    
+    await _profileService.saveDisplayedCard(card);
+    print('カードを保存しました: ${card.title}');
+
+    // 次のカードへ or 退場
+    if (mounted) {
+      if (index < _totalCards - 1) {
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+        );
+      } else {
+        setState(() {
+          _phase = Phase.exiting;
+        });
+        _exitController.forward();
+      }
     }
   }
 
@@ -173,6 +207,19 @@ class _ScreenElevenState extends State<ScreenEleven>
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: Text(
+                _cardData[index]['content']!,
+                style: const TextStyle(
+                  fontSize: 18,
+                  color: Colors.white,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
             const SizedBox(height: 40),
