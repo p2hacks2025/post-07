@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python,unity,node
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,unity,node
 
+#データベースの暗号キー
+serviceAccountKey.json
+
 ### Node ###
 # Logs
 logs

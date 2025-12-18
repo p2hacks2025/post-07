@@ -2,8 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http; 
+import 'home_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import 'home_screen.dart'; 
 
 class ScreenInformation extends StatefulWidget {
   const ScreenInformation({super.key});
@@ -258,6 +259,13 @@ class _ScreenInformationState extends State<ScreenInformation> {
         const SnackBar(content: Text('サーバーに接続できませんでした')),
       );
     }
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存しました')));
+    
+    // HomeScreenに遷移
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
+    );
   }
 
   @override
@@ -515,6 +523,33 @@ class _ScreenInformationState extends State<ScreenInformation> {
                       ),
                     ),
                   ),
+
+                  const SizedBox(height: 8),
+
+                    // 🧪 開発用：ホーム直行ボタン
+                    SizedBox(
+                      width: 100,
+                      height: 36,
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool('isRegistered', true);
+
+                          if (!mounted) return;
+                          Navigator.pushReplacementNamed(context, '/home');
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
+                          padding: EdgeInsets.zero,
+                        ),
+                        child: const Text(
+                          'DEV → HOME',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+
                 ],
               ),
             ),

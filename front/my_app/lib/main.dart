@@ -11,6 +11,8 @@ import 'screens/home_screen.dart';
 import 'screens/screen_information.dart'; 
 import 'screens/screen_birthday.dart'; 
 
+import 'package:uuid/uuid.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -27,17 +29,27 @@ void main() async {
   // 'isRegistered' というデータを探す。なければ false (未登録) になります
   final bool isRegistered = prefs.getBool('isRegistered') ?? false;
 
+    // ■ ユーザ固有IDを取得 or 初回生成
+  String? userId = prefs.getString('user_id');
+  if (userId == null) {
+    userId = const Uuid().v4(); // UUIDを生成
+    await prefs.setString('user_id', userId); // 保存
+  }
+  print("User ID: $userId"); // デバッグ用
+
   // 結果をMyAppに渡してアプリを起動します
-  runApp(MyApp(isRegistered: isRegistered));
+  runApp(MyApp(isRegistered: isRegistered , userId: userId,));
 }
 
 class MyApp extends StatelessWidget {
   // ▼ 登録済みかどうかを受け取るための変数
   final bool isRegistered;
+  final String userId;
 
   const MyApp({
     super.key, 
     required this.isRegistered, // メイン関数から受け取ります
+    required this.userId,
   });
 
   @override
