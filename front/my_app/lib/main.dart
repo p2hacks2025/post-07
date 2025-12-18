@@ -1,21 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+// ▼ データを読み込むために必要です
+import 'package:shared_preferences/shared_preferences.dart';
 
-// 実際のファイル名に合わせてimportしてください
+// 実際のファイル構成に合わせてimportを確認してください
 import 'screens/home_screen.dart'; 
-import 'screens/screen_birthday.dart'; // ← ここ重要！先ほど作った screen_3.dart を読み込む
+import 'screens/screen_information.dart'; // ← これを追加（登録画面）
+import 'screens/screen_birthday.dart'; 
+
+import 'package:uuid/uuid.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // 画面を横向きに固定
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  runApp(const MyApp());
+
+  // ▼▼▼ ここが追加したロジックです ▼▼▼
+  // アプリ起動時に「登録済みかどうか」のチェックを行います
+  final prefs = await SharedPreferences.getInstance();
+  // 'isRegistered' というデータを探す。なければ false (未登録) になります
+  final bool isRegistered = prefs.getBool('isRegistered') ?? false;
+
+    // ■ ユーザ固有IDを取得 or 初回生成
+  String? userId = prefs.getString('user_id');
+  if (userId == null) {
+    userId = const Uuid().v4(); // UUIDを生成
+    await prefs.setString('user_id', userId); // 保存
+  }
+  print("User ID: $userId"); // デバッグ用
+
+  // 結果をMyAppに渡してアプリを起動します
+  runApp(MyApp(isRegistered: isRegistered , userId: userId,));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  // ▼ 登録済みかどうかを受け取るための変数
+  final bool isRegistered;
+  final String userId;
+
+  const MyApp({
+    super.key, 
+    required this.isRegistered, // メイン関数から受け取ります
+    required this.userId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -25,15 +56,16 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      // ■ ここが修正ポイント：最初に表示する画面
-      home: const HomeScreen(),
       
-      // ■ ここが修正ポイント：画面遷移の登録表 (ルーティング)
+      // ▼▼▼ ここが分岐ポイント ▼▼▼
+      // 登録済みなら HomeScreen、まだなら ScreenInformation を表示
+      home: isRegistered ? const HomeScreen() : const ScreenInformation(),
+      
+      // ルーティング設定（他の画面への移動用）
       routes: {
         '/home': (context) => const HomeScreen(),
-        '/birthday': (context) => const ScreenThree(), // 誕生日画面
-        
-        // まだ作っていない画面は、一旦「仮の画面」を表示させるようにしています
+        '/birthday': (context) => const ScreenBirthday(),
+        // まだ作っていない画面の仮置き
         '/profile': (context) => const PlaceholderScreen(title: 'マイプロフィール'),
         '/map': (context) => const PlaceholderScreen(title: '出身地埋め'),
         '/square': (context) => const PlaceholderScreen(title: '広場'),
