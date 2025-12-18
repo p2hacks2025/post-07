@@ -3,8 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
-import 'dart:async';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'screen_profile.dart';
@@ -165,10 +163,19 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // 繰り返しスキャンを開始
+  // 繰り返しスキャンを開始（Timer.periodicで制御）
   void _startRepeatingScan() {
-    // すぐにスキャンを開始し、タイムアウト後に自動的に再開
+    if (_scanTimer?.isActive ?? false) return;
+    
+    // 最初のスキャンをすぐに実行
     _startBleScan();
+    
+    // 15秒ごとに定期的にスキャン
+    _scanTimer = Timer.periodic(const Duration(seconds: 15), (timer) async {
+      if (!_isScanning && mounted) {
+        await _startBleScan();
+      }
+    });
   }
 
   // BLEスキャンを開始
@@ -269,31 +276,17 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        // 画面から戻ってきたら、少し待機して再スキャン
-        if (mounted) {
-          await Future.delayed(const Duration(seconds: 2));
-          _startRepeatingScan();
-        }
+        // 画面から戻ってきてもTimerが自動的に再スキャンを実行
       } else {
-        // 検出されなかった場合は、短い待機後に再スキャン
+        // 検出されなかった場合（Timerが自動的に再スキャンを実行）
         print('\n❌ すれ違い検出なし（総チェック回数: $checkCount）');
-        print('🔄 1秒後に再スキャン開始...');
+        print('🔄 次のスキャンはTimerが自動実行します');
         print('========================================\n');
-
-        if (mounted) {
-          await Future.delayed(const Duration(seconds: 1));
-          _startRepeatingScan();
-        }
       }
     } catch (e) {
       print('BLEスキャンエラー: $e');
       _isScanning = false;
-
-      // エラーが発生しても2秒後に再試行
-      if (mounted) {
-        await Future.delayed(const Duration(seconds: 2));
-        _startRepeatingScan();
-      }
+      // エラーが発生してもTimerが自動的に再試行
     }
   }
 
@@ -456,18 +449,6 @@ class _HomeScreenState extends State<HomeScreen> {
       'color': Colors.purple.shade400,
     },
   ];
-
-  @override
-  void dispose() {
-    _scanSubscription?.cancel(); // スキャン購読をキャンセル
-    FlutterBluePlus.stopScan(); // スキャンを停止
-    
-    // BLE広告を停止
-    _blePeripheral.stop();
-    
-    _pageController.dispose();
-    super.dispose();
-  }
 
   // アイコンをタップしたときの処理
   void _onIconTapped(int index) {
@@ -643,6 +624,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   
                   // ホームのタイトル部分（下半分）
+                  const SizedBox(height: 10),
                   const Text(
                     'ホーム',
                     style: TextStyle(
@@ -651,44 +633,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.white,
                       shadows: [Shadow(blurRadius: 10, color: Colors.black45)],
                     ),
-                    itemCount: _profiles.length,
-                    itemBuilder: (context, index) {
-                      final profile = _profiles[index];
-                      return Card(
-                        elevation: 2,
-                        color: profile['color'],
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () => _showProfileDetail(profile),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: Colors.white.withOpacity(0.5),
-                                child: Icon(profile['icon'], color: Colors.black54),
-                              ),
-                              const SizedBox(height: 8),
-                              // ■■■ 修正：カードの表示内容も更新 ■■■
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
-                                child: Text(
-                                  profile['nickname'], // ニックネーム
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Text(
-                                profile['birthplace'], // 出身地
-                                style: const TextStyle(fontSize: 11, color: Colors.black54),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
                   ),
                   const SizedBox(height: 10),
                   const Icon(Icons.home_rounded, size: 60, color: Colors.white),
@@ -773,7 +717,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        padding: const EdgeInsets.all(8.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -782,30 +726,30 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               card.title,
               style: const TextStyle(
-                fontSize: 32,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: Colors.red,
+                color: Colors.redAccent,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
+            const SizedBox(height: 4),
             
             // コンテンツ
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 1),
-                child: Text(
-                  card.content,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    color: Colors.black87,
-                    height: 1.2,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+              child: Text(
+                card.content,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.black87,
+                  height: 1.3,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
+            
+            const SizedBox(height: 4),
             
             // へーカウントと日付
             Row(
@@ -813,12 +757,12 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.lightbulb, size: 36, color: Colors.amber),
-                    const SizedBox(width: 1),
+                    const Icon(Icons.lightbulb, size: 14, color: Colors.amber),
+                    const SizedBox(width: 2),
                     Text(
                       '${card.heeCount}',
                       style: const TextStyle(
-                        fontSize: 28,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: Colors.amber,
                       ),
@@ -828,7 +772,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   '${card.completedAt.month}/${card.completedAt.day}',
                   style: const TextStyle(
-                    fontSize: 28,
+                    fontSize: 11,
                     color: Colors.grey,
                   ),
                 ),
