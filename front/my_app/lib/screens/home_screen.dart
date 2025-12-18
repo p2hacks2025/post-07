@@ -3,6 +3,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 import 'screen_profile.dart';
 import 'screen_map.dart';
@@ -290,35 +291,24 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       print('すれ違い処理開始: ProfileID=$encounteredProfileId');
 
-      // ===== いったんコメントアウト（すれ違い確認が最優先）=====
-      // // サーバーから相手のプロフィール情報を取得（ダミーAPI）
-      // Profile? encounteredProfile = await _fetchProfileFromServer(
-      //   encounteredProfileId,
-      // );
-      //
-      // // プロフィール情報が取得できなくても、すれ違いは記録する
-      // if (encounteredProfile == null) {
-      //   // デフォルトプロフィールを作成
-      //   encounteredProfile = Profile(
-      //     profileId: encounteredProfileId,
-      //     nickname: 'ゲスト ($encounteredProfileId)',
-      //     birthday: '未登録',
-      //     hometown: '未登録',
-      //     trivia: 'プロフィール未登録のユーザーです',
-      //   );
-      //   print('デフォルトプロフィールを使用します');
-      // }
-      // =========================================================
-
-      // シンプルにデフォルトプロフィールを使用（すれ違い確認用）
-      final encounteredProfile = Profile(
-        profileId: encounteredProfileId,
-        nickname: 'すれ違った人 (${encounteredProfileId.substring(0, 8)}...)',
-        birthday: '未登録',
-        hometown: '未登録',
-        trivia: 'すれ違いテスト中',
+      // サーバーから相手のプロフィール情報を取得
+      Profile? encounteredProfile = await _fetchProfileFromServer(
+        encounteredProfileId,
       );
-      print('デフォルトプロフィールを使用: ${encounteredProfile.nickname}');
+
+      // プロフィール情報が取得できなかった場合、デフォルトプロフィールを使用
+      if (encounteredProfile == null) {
+        encounteredProfile = Profile(
+          profileId: encounteredProfileId,
+          nickname: 'すれ違った人 (${encounteredProfileId.substring(0, 8)}...)',
+          birthday: '未登録',
+          hometown: '未登録',
+          trivia: 'プロフィール未登録のユーザーです',
+        );
+        print('デフォルトプロフィールを使用します');
+      }
+      
+      print('プロフィール取得成功: ${encounteredProfile.nickname}');
 
       // すれ違い履歴に保存
       final encounter = Encounter(
@@ -332,34 +322,46 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // ===== サーバーからプロフィール取得（いったんコメントアウト）=====
-  // サーバーから相手のプロフィール情報を取得（ダミーAPI）
-  // Future<Profile?> _fetchProfileFromServer(String profileId) async {
-  //   try {
-  //     // TODO: 実際のAPIエンドポイントに置き換える
-  //     // final response = await http.get(
-  //     //   Uri.parse('https://your-api.com/profiles/$profileId'),
-  //     // );
-  //     //
-  //     // if (response.statusCode == 200) {
-  //     //   return Profile.fromJson(jsonDecode(response.body));
-  //     // }
-  //
-  //     // ダミーデータを返す
-  //     await Future.delayed(const Duration(milliseconds: 500));
-  //     return Profile(
-  //       profileId: profileId,
-  //       nickname: 'すれ違った人',
-  //       birthday: '2000-01-01',
-  //       hometown: '東京都',
-  //       trivia: 'こんにちは！',
-  //     );
-  //   } catch (e) {
-  //     print('プロフィール取得エラー: $e');
-  //     return null;
-  //   }
-  // }
-  // ===============================================================
+  // サーバーから相手のプロフィール情報を取得
+  Future<Profile?> _fetchProfileFromServer(String profileId) async {
+    try {
+      print('サーバーからプロフィールを取得中...');
+      
+      final url = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/get_profile');
+      final response = await http.get(
+        url,
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
+      ).timeout(const Duration(seconds: 5));
+
+      print('サーバーレスポンス: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('取得したデータ: $data');
+        
+        // バックエンドのキー名に合わせて変換
+        final profile = Profile(
+          profileId: profileId,
+          nickname: data['nickname'] ?? '未設定',
+          birthday: data['birthday'] ?? '',
+          hometown: data['birthplace'] ?? '', // birthplace→hometown
+          trivia: data['trivia'] ?? '',
+        );
+        
+        return profile;
+      } else if (response.statusCode == 404) {
+        print('プロフィールが見つかりませんでした');
+        return null;
+      }
+      
+      return null;
+    } catch (e) {
+      print('プロフィール取得エラー: $e');
+      return null;
+    }
+  }
 
   // メニューのデータ
   final List<Map<String, dynamic>> _screens = [

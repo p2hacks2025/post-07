@@ -118,14 +118,19 @@ class _ScreenElevenState extends State<ScreenEleven>
               ? math.max(0, math.sin(2 * 3 * math.pi * 2 * t) * 80)
               : 0;
 
+          final screenWidth = MediaQuery.of(context).size.width;
+          final screenHeight = MediaQuery.of(context).size.height;
+          final modelWidth = screenWidth * 1.0; // 画面幅の100%
+          final modelHeight = screenHeight * 0.8; // 画面高さの80%
+
           return Stack(
             children: [
               Container(color: Colors.white),
 
-              // 3Dモデルの人キャラクター
+              // 3Dモデルの人キャラクター（背面に配置）
               Positioned(
-                left: MediaQuery.of(context).size.width * x - 150,
-                bottom: -50 + jumpY,
+                left: screenWidth * x - (modelWidth / 2),
+                bottom: 20 + jumpY,
                 child: SizedBox(
                   width: 300,
                   height: 500,
@@ -190,7 +195,9 @@ class _ScreenElevenState extends State<ScreenEleven>
     return Center(
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
-        height: MediaQuery.of(context).size.height * 0.7,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
         decoration: BoxDecoration(
           color: Colors.red,
           borderRadius: BorderRadius.circular(20),
@@ -239,9 +246,36 @@ class _ScreenElevenState extends State<ScreenEleven>
                   onPressed: () => _onCardComplete(index),
                   child: const Text('完了'),
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 40),
+              Text(
+                'へー: ${_heeCounts[index]} / $_maxHeeCount',
+                style: const TextStyle(fontSize: 24, color: Colors.white),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: _heeCounts[index] < _maxHeeCount
+                        ? () {
+                            setState(() {
+                              _heeCounts[index]++;
+                            });
+                          }
+                        : null,
+                    child: const Text('へー'),
+                  ),
+                  const SizedBox(width: 20),
+                  ElevatedButton(
+                    onPressed: () => _onCardComplete(index),
+                    child: const Text('完了'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
