@@ -318,7 +318,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // マイプロフィール画面へ遷移
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const ScreenProfile()),
+          MaterialPageRoute(builder: (context) => ScreenProfile(profileId: _myProfileId)),
         );
       } else if (index == 2) {
         // 地図画面へ遷移

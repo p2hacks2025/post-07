@@ -5,7 +5,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class ScreenProfile extends StatefulWidget {
-  const ScreenProfile({super.key});
+  final String? profileId; // ←追加
+  const ScreenProfile({super.key, this.profileId});
 
   @override
   State<ScreenProfile> createState() => _ScreenProfileState();
@@ -190,6 +191,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
         'birthday': _birthdayController.text,
         'birthplace': _birthplaceController.text,
         'trivia': _triviaController.text,
+        'profileId': widget.profileId
       };
       
       // API呼び出し（ローディング表示）
