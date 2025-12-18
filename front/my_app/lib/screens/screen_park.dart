@@ -140,29 +140,34 @@ class _ScreenElevenState extends State<ScreenEleven>
               ? math.max(0, math.sin(2*3 * math.pi * 2 * t) * 80)
               : 0;
 
+          final screenWidth = MediaQuery.of(context).size.width;
+          final screenHeight = MediaQuery.of(context).size.height;
+          final modelWidth = screenWidth * 1.0; // 画面幅の100%
+          final modelHeight = screenHeight * 0.8; // 画面高さの80%
+
           return Stack(
             children: [
               Container(color: Colors.white),
 
-              // 3Dモデルの人キャラクター
+              // 3Dモデルの人キャラクター（背面に配置）
               Positioned(
-                left: MediaQuery.of(context).size.width * x - 150,
-                bottom: -50 + jumpY,
+                left: screenWidth * x - (modelWidth / 2),
+                bottom: 20 + jumpY,
                 child: SizedBox(
-                  width: 300,
-                  height: 500,
+                  width: modelWidth,
+                  height: modelHeight,
                   child: ModelViewer(
                     src: 'assets/models/p2hacks2025_catgirl.glb',
                     autoRotate: false,
                     cameraControls: false,
                     disableZoom: true,
-                    backgroundColor: Colors.white,
+                    backgroundColor: Colors.transparent,
                     environmentImage: 'neutral',
                   ),
                 ),
               ),
 
-              // 中央カード表示
+              // 中央カード表示（前面に配置）
               if (_phase == Phase.showing)
                 Center(
                   child: PageView.builder(
@@ -185,7 +190,9 @@ class _ScreenElevenState extends State<ScreenEleven>
     return Center(
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
-        height: MediaQuery.of(context).size.height * 0.7,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
         decoration: BoxDecoration(
           color: Colors.red,
           borderRadius: BorderRadius.circular(20),
@@ -196,59 +203,63 @@ class _ScreenElevenState extends State<ScreenEleven>
             ),
           ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.notifications_active, size: 100, color: Colors.white),
-            const SizedBox(height: 20),
-            Text(
-              'カード ${index + 1}',
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30),
-              child: Text(
-                _cardData[index]['content']!,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.notifications_active, size: 100, color: Colors.white),
+              const SizedBox(height: 20),
+              Text(
+                'カード ${index + 1}',
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
                   color: Colors.white,
-                  height: 1.5,
                 ),
-                textAlign: TextAlign.center,
               ),
-            ),
-            const SizedBox(height: 40),
-            Text(
-              'へー: ${_heeCounts[index]} / $_maxHeeCount',
-              style: const TextStyle(fontSize: 24, color: Colors.white),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: _heeCounts[index] < _maxHeeCount
-                      ? () {
-                          setState(() {
-                            _heeCounts[index]++;
-                          });
-                        }
-                      : null,
-                  child: const Text('へー'),
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 30),
+                child: Text(
+                  _cardData[index]['content']!,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    color: Colors.white,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(width: 20),
-                ElevatedButton(
-                  onPressed: () => _onCardComplete(index),
-                  child: const Text('完了'),
-                ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 40),
+              Text(
+                'へー: ${_heeCounts[index]} / $_maxHeeCount',
+                style: const TextStyle(fontSize: 24, color: Colors.white),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: _heeCounts[index] < _maxHeeCount
+                        ? () {
+                            setState(() {
+                              _heeCounts[index]++;
+                            });
+                          }
+                        : null,
+                    child: const Text('へー'),
+                  ),
+                  const SizedBox(width: 20),
+                  ElevatedButton(
+                    onPressed: () => _onCardComplete(index),
+                    child: const Text('完了'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
