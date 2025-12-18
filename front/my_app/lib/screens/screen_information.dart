@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'home_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 
@@ -181,6 +182,12 @@ class _ScreenInformationState extends State<ScreenInformation> {
 
   Future<void> _saveProfile() async {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存しました')));
+    
+    // HomeScreenに遷移
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
+    );
   }
 
   @override
