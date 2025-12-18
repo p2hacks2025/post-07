@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_3d_controller/flutter_3d_controller.dart';
 import 'dart:math' as math;
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ScreenEleven extends StatefulWidget {
   const ScreenEleven({super.key});
@@ -28,6 +30,7 @@ class _ScreenElevenState extends State<ScreenEleven>
   final int _totalCards = 3;
   final int _maxHeeCount = 20;
   final List<int> _heeCounts = [0, 0, 0];
+  bool _isProcessing = false; // 処理中フラグ
 
   // 3Dモデル用コントローラ
   late Flutter3DController _modelController;
@@ -87,17 +90,85 @@ class _ScreenElevenState extends State<ScreenEleven>
     super.dispose();
   }
 
-  void _onCardComplete(int index) {
-    if (index < _totalCards - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeOut,
+  void _onCardComplete(int index) async {
+    if (_isProcessing) return; // 処理中なら無視
+    
+    setState(() {
+      _isProcessing = true;
+    });
+
+    // TODO: 正しいAPIのURLに変更してください
+    // 例: 'http://localhost:5000/save_profile'
+    //     'https://your-domain.ngrok-free.app/save_profile'
+    
+    // へぇ数をバックエンドに送信
+    try {
+      // 注意: このエンドポイントは nickname, birthday, birthplace, trivia が必要です
+      // 現在は仮のデータを送信しています
+      final url = Uri.parse('http://localhost:5000/save_profile');
+      
+      final data = {
+        'nickname': 'テストユーザー',
+        'birthday': '2000-01-01',
+        'birthplace': '東京',
+        'trivia': 'カード${index + 1}のトリビア: へぇ数${_heeCounts[index]}',
+        'hey_count': _heeCounts[index], // 追加情報として送信
+      };
+      
+      debugPrint('データを送信中: ${jsonEncode(data)}');
+      
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(data),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('リクエストがタイムアウトしました');
+        },
       );
-    } else {
-      setState(() {
-        _phase = Phase.exiting;
-      });
-      _exitController.forward();
+      
+      debugPrint('レスポンスステータス: ${response.statusCode}');
+      debugPrint('レスポンスボディ: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        debugPrint('へぇ数を送信しました: ${_heeCounts[index]}');
+        
+        // 次のカードへ移動または退場
+        if (index < _totalCards - 1) {
+          await _pageController.nextPage(
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOut,
+          );
+        } else {
+          setState(() {
+            _phase = Phase.exiting;
+          });
+          _exitController.forward();
+        }
+      } else {
+        debugPrint('送信失敗: ${response.statusCode}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('送信に失敗しました: ${response.statusCode}')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('エラー: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('エラーが発生しました: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
     }
   }
 
@@ -232,7 +303,7 @@ class _ScreenElevenState extends State<ScreenEleven>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton(
-                  onPressed: _heeCounts[index] < _maxHeeCount
+                  onPressed: (_heeCounts[index] < _maxHeeCount && !_isProcessing)
                       ? () {
                           setState(() {
                             _heeCounts[index]++;
@@ -243,39 +314,21 @@ class _ScreenElevenState extends State<ScreenEleven>
                 ),
                 const SizedBox(width: 20),
                 ElevatedButton(
-                  onPressed: () => _onCardComplete(index),
-                  child: const Text('完了'),
+                  onPressed: _isProcessing ? null : () => _onCardComplete(index),
+                  child: _isProcessing
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('完了'),
                 ),
-              ),
-              const SizedBox(height: 40),
-              Text(
-                'へー: ${_heeCounts[index]} / $_maxHeeCount',
-                style: const TextStyle(fontSize: 24, color: Colors.white),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    onPressed: _heeCounts[index] < _maxHeeCount
-                        ? () {
-                            setState(() {
-                              _heeCounts[index]++;
-                            });
-                          }
-                        : null,
-                    child: const Text('へー'),
-                  ),
-                  const SizedBox(width: 20),
-                  ElevatedButton(
-                    onPressed: () => _onCardComplete(index),
-                    child: const Text('完了'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
       ),
     );
