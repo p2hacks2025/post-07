@@ -1,0 +1,21 @@
+# gemini接続テスト
+
+import os
+from dotenv import load_dotenv
+import google.generativeai as genai
+
+def main():
+    load_dotenv(override=True)  # ← これが重要
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is not set")
+
+    genai.configure(api_key=api_key)
+
+    model = genai.GenerativeModel("models/gemini-2.5-flash")
+    response = model.generate_content("ティラノサウルスの先祖はダチョウとワニと同じというのは本当ですか")
+    print(response.text)
+
+if __name__ == "__main__":
+    main()

@@ -83,3 +83,28 @@ def save_profile(profile: UserProfile):
     except Exception as e:
         print(f"エラー発生: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/")
+def read_root():
+    return {"message": "Kira-Kira Hackathon API is running!"}
+  
+  
+@app.post("/submit-trivia")
+def receive_trivia(profile: TriviaProfile):
+    """
+    フロントエンドからトリビア情報を受け取るAPI
+    """
+    print(f"受信したデータ: {profile.nickname}, {profile.trivia_text}")
+    
+    # TODO: ここにデータベースへの保存処理や、AI画像生成の処理を書きます
+    
+    # フロントへの返信（レスポンス）
+    return {
+        "status": "success",
+        "message": f"{profile.nickname}さんのトリビアを受け取りました！",
+        "received_data": {
+            "trivia": profile.trivia_text,
+            "generated_image_url": "https://example.com/dummy_ai_image.png" # ここに生成された画像のURLが入る想定
+        }
+    }

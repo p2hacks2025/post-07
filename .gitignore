@@ -161,7 +161,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/  # Commented out to allow Flutter lib/ directories
 lib64/
 parts/
 sdist/
@@ -385,5 +385,8 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+back/firebase/p2hacks.json
+
 
 # End of https://www.toptal.com/developers/gitignore/api/python,unity,node
