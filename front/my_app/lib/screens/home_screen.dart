@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
@@ -401,6 +403,18 @@ class _HomeScreenState extends State<HomeScreen> {
       'color': Colors.purple.shade400,
     },
   ];
+
+  @override
+  void dispose() {
+    _scanSubscription?.cancel(); // スキャン購読をキャンセル
+    FlutterBluePlus.stopScan(); // スキャンを停止
+    
+    // BLE広告を停止
+    _blePeripheral.stop();
+    
+    _pageController.dispose();
+    super.dispose();
+  }
 
   // アイコンをタップしたときの処理
   void _onIconTapped(int index) {

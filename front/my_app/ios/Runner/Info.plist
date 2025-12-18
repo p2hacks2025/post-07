@@ -42,5 +42,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>このアプリはすれ違い検知のためにBluetoothを使用します。</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>このアプリはすれ違い検知のためにBluetoothを使用します。</string>
 </dict>
 </plist>
