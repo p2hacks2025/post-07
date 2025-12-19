@@ -1,9 +1,10 @@
+import 'dart:convert'; // JSON解析用に追加
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http; 
+import 'package:http/http.dart' as http;
 
-import 'home_screen.dart'; 
+import 'home_screen.dart';
 
 class ScreenInformation extends StatefulWidget {
   const ScreenInformation({super.key});
@@ -17,12 +18,13 @@ class _ScreenInformationState extends State<ScreenInformation> {
   final _triviaController = TextEditingController();
   final _birthdayController = TextEditingController();
   final _birthplaceController = TextEditingController();
-  final _heeController = TextEditingController(); 
+  final _heeController = TextEditingController();
 
   final FocusNode _triviaFocusNode = FocusNode();
 
   File? _profileImage;
-  File? _triviaAiImage;
+  String? _resultImageUrl; // AI生成された画像のURLを保存する変数
+  bool _isLoading = false;   // 生成中かどうかを判定するフラグ
 
   final ImagePicker _picker = ImagePicker();
 
@@ -43,17 +45,13 @@ class _ScreenInformationState extends State<ScreenInformation> {
     super.dispose();
   }
 
-  Future<void> _pickImage(bool isProfile) async {
+  // --- 画像選択 (プロフィール用のみ) ---
+  Future<void> _pickImage() async {
     try {
-      final XFile? pickedFile =
-          await _picker.pickImage(source: ImageSource.gallery);
+      final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
       if (pickedFile != null) {
         setState(() {
-          if (isProfile) {
-            _profileImage = File(pickedFile.path);
-          } else {
-            _triviaAiImage = File(pickedFile.path);
-          }
+          _profileImage = File(pickedFile.path);
         });
       }
     } catch (e) {
@@ -61,11 +59,11 @@ class _ScreenInformationState extends State<ScreenInformation> {
     }
   }
 
+  // --- 日付・都道府県選択 (変更なし) ---
   Future<void> _selectDate() async {
     FocusScope.of(context).unfocus();
     int tempMonth = 1;
     int tempDay = 1;
-
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -113,7 +111,6 @@ class _ScreenInformationState extends State<ScreenInformation> {
       '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
     ];
     int tempIndex = 0;
-
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -125,8 +122,7 @@ class _ScreenInformationState extends State<ScreenInformation> {
             children: [
               _buildPickerToolbar(
                 onDone: () {
-                  setState(() =>
-                      _birthplaceController.text = prefectures[tempIndex]);
+                  setState(() => _birthplaceController.text = prefectures[tempIndex]);
                   Navigator.pop(context);
                 },
               ),
@@ -137,8 +133,7 @@ class _ScreenInformationState extends State<ScreenInformation> {
                   onSelectedItemChanged: (i) => tempIndex = i,
                   childDelegate: ListWheelChildBuilderDelegate(
                     builder: (c, i) => Center(
-                        child: Text(prefectures[i],
-                            style: const TextStyle(fontSize: 18))),
+                        child: Text(prefectures[i], style: const TextStyle(fontSize: 18))),
                     childCount: prefectures.length,
                   ),
                 ),
@@ -150,133 +145,85 @@ class _ScreenInformationState extends State<ScreenInformation> {
     );
   }
 
-  Widget _buildPickerToolbar({required VoidCallback onDone}) {
-    return Container(
-      color: Colors.grey[100],
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('キャンセル')),
-          TextButton(
-            onPressed: onDone,
-            child: const Text('完了', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWheel(int count, Function(int) onChanged, String unit) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 70,
-          child: ListWheelScrollView.useDelegate(
-            itemExtent: 40,
-            physics: const FixedExtentScrollPhysics(),
-            onSelectedItemChanged: onChanged,
-            childDelegate: ListWheelChildBuilderDelegate(
-              builder: (c, i) => Center(
-                  child: Text('${i + 1}', style: const TextStyle(fontSize: 20))),
-              childCount: count,
-            ),
-          ),
-        ),
-        Text(unit, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-
+  // --- サーバー送信処理 (★ここが移植ポイント) ---
   Future<void> _saveProfile() async {
-    if (_nicknameController.text.isEmpty) {
+    if (_nicknameController.text.isEmpty || _triviaController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ニックネームを入力してください')),
+        const SnackBar(content: Text('ニックネームとトリビアを入力してください')),
       );
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('サーバーに送信中...')),
-    );
+    setState(() => _isLoading = true);
 
     try {
       final uri = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/save_profile');
-
       var request = http.MultipartRequest('POST', uri);
 
+      // テキストデータのセット
       request.fields['nickname'] = _nicknameController.text;
       request.fields['birthday'] = _birthdayController.text;
       request.fields['birthplace'] = _birthplaceController.text;
       request.fields['trivia'] = _triviaController.text;
       request.fields['hee_count'] = _heeController.text;
 
+      // 画像ファイルのセット (プロフィール画像のみ)
       if (_profileImage != null) {
         request.files.add(await http.MultipartFile.fromPath(
           'profile_image',
           _profileImage!.path,
         ));
       }
-      if (_triviaAiImage != null) {
-        request.files.add(await http.MultipartFile.fromPath(
-          'trivia_ai_image',
-          _triviaAiImage!.path,
-        ));
-      }
 
-      print('送信開始: $uri');
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      print('ステータスコード: ${response.statusCode}');
-      print('サーバーからの返事: ${response.body}');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Discord共有コードのレスポンス構造 data['data']['card_image_url'] に合わせる
+        final imageUrl = data['data']['card_image_url'];
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+        setState(() {
+          _resultImageUrl = imageUrl;
+        });
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('登録成功！ホームへ移動します')),
+          const SnackBar(content: Text('AI画像生成完了！')),
         );
 
-        await Future.delayed(const Duration(seconds: 1));
+        // 少し待ってからホーム画面へ
+        await Future.delayed(const Duration(seconds: 2));
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('エラーが発生しました: ${response.statusCode}')),
-        );
+        throw Exception('サーバーエラー: ${response.statusCode}');
       }
     } catch (e) {
-      print('通信エラー詳細: $e');
+      debugPrint('通信エラー詳細: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('サーバーに接続できませんでした')),
+        const SnackBar(content: Text('通信に失敗しました')),
       );
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final Size screenSize = MediaQuery.of(context).size;
-
     double cardHeight = screenSize.height * 0.9;
     double cardWidth = cardHeight * 1.58;
-
     if (cardWidth > screenSize.width * 0.95) {
       cardWidth = screenSize.width * 0.95;
       cardHeight = cardWidth / 1.58;
     }
 
     return GestureDetector(
-      behavior: HitTestBehavior.deferToChild,
-      onTap: () {
-        FocusScope.of(context).unfocus();
-      },
+      onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: Colors.grey[300],
         resizeToAvoidBottomInset: true,
@@ -286,7 +233,6 @@ class _ScreenInformationState extends State<ScreenInformation> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   SizedBox(
                     width: cardWidth,
@@ -308,52 +254,43 @@ class _ScreenInformationState extends State<ScreenInformation> {
                         padding: const EdgeInsets.all(12.0),
                         child: Column(
                           children: [
-                            // ニックネーム入力 (修正：onChanged追加)
                             TextFormField(
                               controller: _nicknameController,
                               onChanged: (value) => setState(() {}),
-                              style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                               decoration: const InputDecoration(
                                 labelText: 'ニックネーム',
                                 border: OutlineInputBorder(),
                                 isDense: true,
-                                contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 8),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                               ),
                             ),
                             const SizedBox(height: 8),
-
                             Expanded(
                               child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
+                                  // --- 左側：画像枠エリア ---
                                   Expanded(
                                     flex: 4,
                                     child: Column(
                                       children: [
                                         Expanded(
                                           child: _buildPhotoBox(
-                                            label: 'プロフィール写真を選択',
+                                            label: 'プロフィール写真',
                                             icon: Icons.person,
                                             file: _profileImage,
-                                            onTap: () => _pickImage(true),
+                                            onTap: () => _pickImage(),
                                           ),
                                         ),
                                         const SizedBox(height: 4),
                                         Expanded(
-                                          child: _buildPhotoBox(
-                                            label: 'トリビアのAI生成画像',
-                                            icon: Icons.smart_toy,
-                                            file: _triviaAiImage,
-                                            onTap: () => _pickImage(false),
-                                          ),
+                                          child: _buildAiImageArea(), // AI画像表示用
                                         ),
                                       ],
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-
+                                  // --- 右側：入力エリア ---
                                   Expanded(
                                     flex: 6,
                                     child: Column(
@@ -370,115 +307,15 @@ class _ScreenInformationState extends State<ScreenInformation> {
                                           onTap: _selectPrefecture,
                                         ),
                                         const SizedBox(height: 4),
-
                                         Expanded(
                                           child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.stretch,
                                             children: [
                                               Expanded(
                                                 flex: 7,
-                                                child: GestureDetector(
-                                                  behavior:
-                                                      HitTestBehavior.opaque,
-                                                  onTap: () {
-                                                    FocusScope.of(context)
-                                                        .requestFocus(
-                                                            _triviaFocusNode);
-                                                  },
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
-                                                      border: Border.all(
-                                                          color: Colors.grey),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              4),
-                                                    ),
-                                                    padding:
-                                                        const EdgeInsets.all(8),
-                                                    child: TextField(
-                                                      controller:
-                                                          _triviaController,
-                                                      focusNode:
-                                                          _triviaFocusNode,
-                                                      // 修正：onChanged追加
-                                                      onChanged: (value) =>
-                                                          setState(() {}),
-                                                      keyboardType:
-                                                          TextInputType.multiline,
-                                                      textInputAction:
-                                                          TextInputAction.newline,
-                                                      maxLines: null,
-                                                      expands: true,
-                                                      textAlignVertical:
-                                                          TextAlignVertical.top,
-                                                      style: const TextStyle(
-                                                          fontSize: 14),
-                                                      decoration:
-                                                          const InputDecoration(
-                                                        labelText: '自分の知ってるトリビアを入力',
-                                                        labelStyle: TextStyle(
-                                                            fontSize: 10),
-                                                        hintText: '豆知識...',
-                                                        border: InputBorder.none,
-                                                        isDense: true,
-                                                        contentPadding:
-                                                            EdgeInsets.zero,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
+                                                child: _buildTriviaInput(),
                                               ),
                                               const SizedBox(width: 8),
-
-                                              Container(
-                                                width: 60,
-                                                decoration: BoxDecoration(
-                                                  color: Colors.blue[50],
-                                                  border: Border.all(
-                                                      color: Colors.blue),
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
-                                                ),
-                                                child: Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: [
-                                                    SizedBox(
-                                                      height: 40,
-                                                      child: TextField(
-                                                        controller:
-                                                            _heeController,
-                                                        readOnly: true, 
-                                                        textAlign:
-                                                            TextAlign.center,
-                                                        style: const TextStyle(
-                                                          fontSize: 20,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          color: Colors.blue,
-                                                        ),
-                                                        decoration:
-                                                            const InputDecoration(
-                                                          border:
-                                                              InputBorder.none,
-                                                          hintText: '0',
-                                                          hintStyle: TextStyle(
-                                                              color:
-                                                                  Colors.blue),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    const Text(
-                                                      'へぇ',
-                                                      style: TextStyle(
-                                                        fontSize: 10,
-                                                        color: Colors.blue,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
+                                              _buildHeeCounter(),
                                             ],
                                           ),
                                         ),
@@ -493,28 +330,9 @@ class _ScreenInformationState extends State<ScreenInformation> {
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 20),
-
-                  RotatedBox(
-                    quarterTurns: 0,
-                    child: SizedBox(
-                      width: 100,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _saveProfile,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Text('登録',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  ),
+                  // 登録ボタン
+                  _buildSubmitButton(),
                 ],
               ),
             ),
@@ -524,12 +342,9 @@ class _ScreenInformationState extends State<ScreenInformation> {
     );
   }
 
-  Widget _buildPhotoBox({
-    required String label,
-    required IconData icon,
-    required File? file,
-    required VoidCallback onTap,
-  }) {
+  // --- 小分けにした部品ウィジェット ---
+
+  Widget _buildPhotoBox({required String label, required IconData icon, File? file, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -542,39 +357,144 @@ class _ScreenInformationState extends State<ScreenInformation> {
         child: file != null
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(5),
-                child: ClipOval(child: Image.file(file, fit: BoxFit.cover)),
+                child: Image.file(file, fit: BoxFit.cover),
               )
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(icon, color: Colors.grey, size: 24),
-                  Text(label,
-                      style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                  Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
                 ],
               ),
       ),
     );
   }
 
-  Widget _buildSelectionField({
-    required TextEditingController controller,
-    required String label,
-    required VoidCallback onTap,
-  }) {
+  // AI画像表示エリア (★タップ無効化済み)
+  Widget _buildAiImageArea() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.blueGrey[50],
+        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(5),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator()) // 生成中
+            : _resultImageUrl != null
+                ? Image.network(_resultImageUrl!, fit: BoxFit.cover) // サーバーからの画像
+                : const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.auto_awesome, color: Colors.blue, size: 24),
+                      Text('AIが画像を生成します', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: Colors.blue)),
+                    ],
+                  ),
+      ),
+    );
+  }
+
+  Widget _buildTriviaInput() {
+    return GestureDetector(
+      onTap: () => _triviaFocusNode.requestFocus(),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        padding: const EdgeInsets.all(8),
+        child: TextField(
+          controller: _triviaController,
+          focusNode: _triviaFocusNode,
+          onChanged: (value) => setState(() {}),
+          maxLines: null,
+          expands: true,
+          textAlignVertical: TextAlignVertical.top,
+          style: const TextStyle(fontSize: 14),
+          decoration: const InputDecoration(
+            labelText: '自分の知ってるトリビアを入力',
+            labelStyle: TextStyle(fontSize: 10),
+            hintText: '豆知識...',
+            border: InputBorder.none,
+            isDense: true,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeeCounter() {
+    return Container(
+      width: 60,
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        border: Border.all(color: Colors.blue),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(_heeController.text, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue)),
+          const Text('へぇ', style: TextStyle(fontSize: 10, color: Colors.blue)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return SizedBox(
+      width: 100,
+      height: 50,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _saveProfile,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        child: _isLoading 
+          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+          : const Text('登録', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  // (共通部品) 日付ホイールなど
+  Widget _buildPickerToolbar({required VoidCallback onDone}) {
+    return Container(
+      color: Colors.grey[100], height: 50, padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
+        TextButton(onPressed: onDone, child: const Text('完了', style: TextStyle(fontWeight: FontWeight.bold))),
+      ]),
+    );
+  }
+
+  Widget _buildWheel(int count, Function(int) onChanged, String unit) {
+    return Row(children: [
+      SizedBox(width: 70, child: ListWheelScrollView.useDelegate(
+        itemExtent: 40, physics: const FixedExtentScrollPhysics(),
+        onSelectedItemChanged: onChanged,
+        childDelegate: ListWheelChildBuilderDelegate(
+          builder: (c, i) => Center(child: Text('${i + 1}', style: const TextStyle(fontSize: 20))),
+          childCount: count,
+        ),
+      )),
+      Text(unit, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+    ]);
+  }
+
+  Widget _buildSelectionField({required TextEditingController controller, required String label, required VoidCallback onTap}) {
     return TextFormField(
-      controller: controller,
-      readOnly: true,
-      onTap: onTap,
+      controller: controller, readOnly: true, onTap: onTap,
       style: const TextStyle(fontSize: 13),
       decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(fontSize: 11),
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        labelText: label, labelStyle: const TextStyle(fontSize: 11),
+        isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         border: const OutlineInputBorder(),
         suffixIcon: const Icon(Icons.arrow_drop_down, size: 18),
-        suffixIconConstraints:
-            const BoxConstraints(minWidth: 24, minHeight: 24),
       ),
     );
   }
