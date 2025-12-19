@@ -29,20 +29,18 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // カスタムサービスUUID
-  static const String customServiceUuid =
-      '0000FFF0-0000-1000-8000-00805f9b34fb';
+  StreamSubscription? _scanSubscription;
+  FlutterBlePeripheral _blePeripheral = FlutterBlePeripheral();
 
-  int _selectedIndex = 0; // 現在真ん中にあるアイコンの番号
+  static const String customServiceUuid = '0000FFF0-0000-1000-8000-00805f9b34fb';
+
+  int _selectedIndex = 0;
   late PageController _pageController;
-  Timer? _scanTimer;
   bool _isScanning = false;
   final ProfileService _profileService = ProfileService();
   String? _myProfileId;
-  List<TriviaCard> _displayedCards = []; // 展示するカードのリスト
 
-  // ■■■ 修正：プロフィール帳のデータを新しい入力項目に合わせました ■■■
-  // 項目：ニックネーム, 誕生日, 出身地, トリビア
+  // ダミーデータ（プロフィールリスト）
   final List<Map<String, dynamic>> _profiles = [
     {
       'nickname': 'タロウ',
@@ -72,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'nickname': 'ゆう',
       'birthday': '3月3日',
       'birthplace': '福岡県',
-      'trivia': '音ゲーの全国大会に出たことがあります（一回戦負けですが...）',
+      'trivia': '音ゲーの全国大会に出たことがあります。',
       'color': Colors.orange.shade100,
       'icon': Icons.face_5,
     },
@@ -101,33 +99,12 @@ class _HomeScreenState extends State<HomeScreen> {
       initialPage: _selectedIndex,
       viewportFraction: 0.1,
     );
-
-    // プロフィールIDを取得してからBLE開始
     _initializeProfile();
-    
-    // 展示カードを読み込み
-    _loadDisplayedCards();
   }
 
-  // 展示カードを読み込む
-  Future<void> _loadDisplayedCards() async {
-    final cards = await _profileService.loadDisplayedCards();
-    if (mounted) {
-      setState(() {
-        _displayedCards = cards;
-      });
-      print('展示カードを読み込みました: ${cards.length}枚');
-    }
-  }
-
-  // プロフィールIDを取得または生成してBLE開始
   Future<void> _initializeProfile() async {
-    print('\n🚀 アプリ初期化開始...');
     Profile? myProfile = await _profileService.loadMyProfile();
-
     if (myProfile == null) {
-      print('新しいプロフィールを生成します');
-      // プロフィールが存在しない場合、新しいIDを生成して保存
       _myProfileId = _profileService.generateProfileId();
       myProfile = Profile(
         profileId: _myProfileId!,
@@ -137,28 +114,18 @@ class _HomeScreenState extends State<HomeScreen> {
         trivia: '',
       );
       await _profileService.saveMyProfile(myProfile);
-      print('プロフィールを保存しました: $_myProfileId');
     } else {
-      print('既存のプロフィールを読み込みました');
       _myProfileId = myProfile.profileId;
-      print('プロフィールID: $_myProfileId');
     }
-
-    // BLE広告を開始
-    print('BLE広告を開始します...');
     await _startBleAdvertising();
-
-    // 繰り返しスキャンを開始
-    print('BLEスキャンを開始します...');
     _startRepeatingScan();
-    print('✅ 初期化完了\n');
   }
 
   @override
   void dispose() {
-    _scanTimer?.cancel();
     FlutterBluePlus.stopScan();
     _stopBleAdvertising();
+    _scanSubscription?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -178,94 +145,33 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // BLEスキャンを開始
   Future<void> _startBleScan() async {
-    if (_isScanning) {
-      print('⚠️ すでにスキャン中です');
-      return;
-    }
-
+    if (_isScanning) return;
     _isScanning = true;
-    print('\n========================================');
-    print('🔍 BLEスキャン開始...');
-    print('自分のプロフィールID: $_myProfileId');
-    print('========================================');
-
     try {
-      // Bluetoothがオンになっているか確認
-      if (await FlutterBluePlus.isSupported == false) {
-        print('❌ このデバイスはBluetoothをサポートしていません');
-        _isScanning = false;
-        return;
-      }
-
-      // Bluetooth状態を確認
-      var adapterState = await FlutterBluePlus.adapterState.first;
-      print('📡 Bluetoothアダプター状態: $adapterState');
-
-      // カスタムサービスUUIDでフィルタリングしてスキャン開始
-      print('🔎 スキャン開始: $customServiceUuid');
-      print('⏱️  タイムアウト: 4秒');
-
+      if (await FlutterBluePlus.isSupported == false) return;
       await FlutterBluePlus.startScan(
         withServices: [Guid(customServiceUuid)],
         timeout: const Duration(seconds: 4),
       );
-
-      // スキャン結果をリッスン（スキャン中継続的にチェック）
-      StreamSubscription? scanSubscription;
+      
       String? detectedProfileId;
-      int checkCount = 0;
-
-      scanSubscription = FlutterBluePlus.scanResults.listen((results) {
-        checkCount++;
-        print('📊 スキャンチェック #$checkCount: ${results.length}件');
-
-        if (results.isNotEmpty && detectedProfileId == null) {
-          print('✅ デバイス検出: ${results.length}件のデバイスを発見！');
-
-          // 相手のプロフィールIDを取得
-          for (var i = 0; i < results.length; i++) {
-            var result = results[i];
-            print('\n--- デバイス #${i + 1} ---');
-            print('  名前: ${result.device.platformName}');
-            print('  ID: ${result.device.remoteId}');
-            print('  RSSI: ${result.rssi}');
-
-            // Service Dataから相手のプロフィールIDを取得
-            final serviceData = result.advertisementData.serviceData;
-            print('  Service Data: $serviceData');
-            print('  Service UUIDs: ${result.advertisementData.serviceUuids}');
-
-            if (serviceData.containsKey(Guid(customServiceUuid))) {
-              try {
-                final bytes = serviceData[Guid(customServiceUuid)]!;
-                detectedProfileId = utf8.decode(bytes);
-                print('✅ 相手のプロフィールIDを検知: $detectedProfileId');
-                break;
-              } catch (e) {
-                print('⚠️ プロフィールIDのデコードエラー: $e');
-              }
-            } else {
-              print('⚠️ Service Dataに目的のUUIDが含まれていません');
-            }
+      StreamSubscription? scanSub = FlutterBluePlus.scanResults.listen((results) {
+        for (var result in results) {
+          final serviceData = result.advertisementData.serviceData;
+          if (serviceData.containsKey(Guid(customServiceUuid))) {
+            detectedProfileId = utf8.decode(serviceData[Guid(customServiceUuid)]!);
+            break;
           }
         }
       });
 
-      // タイムアウトまで待機（4秒）
       await Future.delayed(const Duration(seconds: 4));
-
-      // スキャンを停止
-      print('⏹️  スキャン停止');
       await FlutterBluePlus.stopScan();
-      await scanSubscription?.cancel();
+      await scanSub.cancel();
       _isScanning = false;
 
-      // プロフィールIDが取得できた場合、すれ違い処理を実行
       if (detectedProfileId != null && mounted) {
-        print('\n🎉 すれ違い検出成功！');
-        print('相手のプロフィールID: $detectedProfileId');
         await _handleEncounter(detectedProfileId!);
 
         // すれ違い成功画面へ遷移
@@ -290,294 +196,88 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // BLE広告を開始（プロフィールIDをService Dataに含める）
   Future<void> _startBleAdvertising() async {
-    if (_myProfileId == null) {
-      print('❌ プロフィールIDがnullのため広告を開始できません');
-      return;
-    }
-
+    if (_myProfileId == null) return;
     try {
-      print('\n========================================');
-      print('📢 BLE広告開始中...');
-      final FlutterBlePeripheral blePeripheral = FlutterBlePeripheral();
-
-      // プロフィールIDをバイト列にエンコード
-      final List<int> profileIdBytes = utf8.encode(_myProfileId!);
-      print('プロフィールID: $_myProfileId');
-      print('エンコード後: $profileIdBytes');
-      print('バイト数: ${profileIdBytes.length}');
-
       final AdvertiseData advertiseData = AdvertiseData(
         serviceUuid: customServiceUuid,
-        serviceData: profileIdBytes,
+        serviceData: utf8.encode(_myProfileId!),
         includePowerLevel: true,
       );
-
-      await blePeripheral.start(advertiseData: advertiseData);
-      print('✅ BLE広告開始成功！');
-      print('サービスUUID: $customServiceUuid');
-      print('========================================\n');
-    } catch (e) {
-      print('❌ BLE広告エラー: $e');
-      print('========================================\n');
-    }
+      await _blePeripheral.start(advertiseData: advertiseData);
+    } catch (e) { debugPrint('BLE Advertising Error: $e'); }
   }
 
-  // BLE広告を停止
-  Future<void> _stopBleAdvertising() async {
-    try {
-      final FlutterBlePeripheral blePeripheral = FlutterBlePeripheral();
-      await blePeripheral.stop();
-    } catch (e) {
-      print('BLE広告停止エラー: $e');
-    }
+  Future<void> _stopBleAdvertising() async => await _blePeripheral.stop();
+
+  Future<void> _handleEncounter(String id) async {
+    Profile? profile = await _fetchProfileFromServer(id);
+    profile ??= Profile(profileId: id, nickname: 'すれ違った人', birthday: '', hometown: '', trivia: '');
+    await _profileService.saveEncounter(Encounter(profile: profile, encounterTime: DateTime.now()));
   }
 
-  // すれ違い時の処理（プロフィール取得と保存）
-  Future<void> _handleEncounter(String encounteredProfileId) async {
+  Future<Profile?> _fetchProfileFromServer(String id) async {
     try {
-      print('すれ違い処理開始: ProfileID=$encounteredProfileId');
-
-      // サーバーから相手のプロフィール情報を取得
-      Profile? encounteredProfile = await _fetchProfileFromServer(
-        encounteredProfileId,
-      );
-
-      // プロフィール情報が取得できなかった場合、デフォルトプロフィールを使用
-      if (encounteredProfile == null) {
-        encounteredProfile = Profile(
-          profileId: encounteredProfileId,
-          nickname: 'すれ違った人 (${encounteredProfileId.substring(0, 8)}...)',
-          birthday: '未登録',
-          hometown: '未登録',
-          trivia: 'プロフィール未登録のユーザーです',
-        );
-        print('デフォルトプロフィールを使用します');
-      }
-      
-      print('プロフィール取得成功: ${encounteredProfile.nickname}');
-
-      // すれ違い履歴に保存
-      final encounter = Encounter(
-        profile: encounteredProfile,
-        encounterTime: DateTime.now(),
-      );
-      await _profileService.saveEncounter(encounter);
-      print('✅ すれ違い履歴を保存しました: ${encounteredProfile.nickname}');
-    } catch (e) {
-      print('❌ すれ違い処理エラー: $e');
-    }
-  }
-
-  // サーバーから相手のプロフィール情報を取得
-  Future<Profile?> _fetchProfileFromServer(String profileId) async {
-    try {
-      print('サーバーからプロフィールを取得中...');
-      
       final url = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/get_profile');
-      final response = await http.get(
-        url,
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
-        },
-      ).timeout(const Duration(seconds: 5));
-
-      print('サーバーレスポンス: ${response.statusCode}');
-      
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        print('取得したデータ: $data');
-        
-        // バックエンドのキー名に合わせて変換
-        final profile = Profile(
-          profileId: profileId,
-          nickname: data['nickname'] ?? '未設定',
-          birthday: data['birthday'] ?? '',
-          hometown: data['birthplace'] ?? '', // birthplace→hometown
-          trivia: data['trivia'] ?? '',
-        );
-        
-        return profile;
-      } else if (response.statusCode == 404) {
-        print('プロフィールが見つかりませんでした');
-        return null;
+      final res = await http.get(url, headers: {'ngrok-skip-browser-warning': 'true'}).timeout(const Duration(seconds: 5));
+      if (res.statusCode == 200) {
+        final d = jsonDecode(res.body);
+        return Profile(profileId: id, nickname: d['nickname'] ?? '', birthday: d['birthday'] ?? '', hometown: d['birthplace'] ?? '', trivia: d['trivia'] ?? '');
       }
-      
-      return null;
-    } catch (e) {
-      print('プロフィール取得エラー: $e');
-      return null;
-    }
+    } catch (e) { return null; }
+    return null;
   }
 
-  // メニューのデータ
+  // --- メニュー設定 ---
   final List<Map<String, dynamic>> _screens = [
-    {
-      'title': 'ホーム',
-      'icon': Icons.home_rounded,
-      'color': Colors.green.shade600,
-    },
-    {
-      'title': 'マイプロフィール',
-      'icon': Icons.person_rounded,
-      'color': Colors.blue.shade400,
-    },
-    {
-      'title': '出身地埋め',
-      'icon': Icons.map_rounded,
-      'color': Colors.orange.shade400,
-    }, // index: 2
-    {
-      'title': '誕生日埋め',
-      'icon': Icons.cake_rounded,
-      'color': Colors.pink.shade400,
-    },
-    {
-      'title': '広場',
-      'icon': Icons.people_alt_rounded,
-      'color': Colors.teal.shade400,
-    },
-    {
-      'title': 'トロフィー',
-      'icon': Icons.emoji_events_rounded,
-      'color': Colors.amber.shade600,
-    },
-    {
-      'title': '履歴',
-      'icon': Icons.history_rounded,
-      'color': Colors.purple.shade400,
-    },
+    {'title': 'ホーム', 'icon': Icons.home_rounded, 'color': Colors.green.shade600},
+    {'title': 'マイプロフィール', 'icon': Icons.person_rounded, 'color': Colors.blue.shade400},
+    {'title': '出身地埋め', 'icon': Icons.map_rounded, 'color': Colors.orange.shade400},
+    {'title': '誕生日埋め', 'icon': Icons.cake_rounded, 'color': Colors.pink.shade400},
+    {'title': '広場', 'icon': Icons.people_alt_rounded, 'color': Colors.teal.shade400},
+    {'title': 'トロフィー', 'icon': Icons.emoji_events_rounded, 'color': Colors.amber.shade600},
+    {'title': '履歴', 'icon': Icons.history_rounded, 'color': Colors.purple.shade400},
   ];
 
   // アイコンをタップしたときの処理
   void _onIconTapped(int index) {
     if (index == _selectedIndex) {
-      if (index == 1) {
-        // プロフィール編集画面へ遷移 (ScreenProfile)
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ScreenProfile()),
-        );
-      } else if (index == 2) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ScreenMap()),
-        );
-      } else if (index == 3) {
-        // ScreenThreeがscreen_birthday.dartにあると仮定
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ScreenBirthday()),
-        );
-      } else if (index == 0) {
-        // ホームボタンを押したとき（特に何もしないか、更新など）
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('ここがホームです')));
-      } else if (index == 4) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ScreenEleven()),
-        ).then((_) {
-          // 広場画面から戻ってきたらカードを再読み込み
-          _loadDisplayedCards();
-        });
-      } else if (index == 5) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ScreenTen()),
-        );
-      } else if (index == 6) {
-        // 履歴画面へ遷移
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ScreenHistory()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${_screens[index]['title']} は準備中です')),
-        );
+      Widget? target;
+      switch (index) {
+        case 1: target = const ScreenProfile(); break;
+        case 2: target = const ScreenMap(); break;
+        case 3: target = const ScreenBirthday(); break;
+        case 4: target = const ScreenEleven(); break;
+        case 5: target = const ScreenAchieve(); break;
+        case 6: target = const ScreenHistory(); break;
       }
+      if (target != null) Navigator.push(context, MaterialPageRoute(builder: (context) => target!));
     } else {
-      _pageController.animateToPage(
-        index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      _pageController.animateToPage(index, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
     }
   }
 
-  // ■■■ 修正：詳細ダイアログの表示内容を変更しました ■■■
   void _showProfileDetail(Map<String, dynamic> data) {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              Icon(data['icon'], size: 30),
-              const SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  data['nickname'], // 名前 -> ニックネーム
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 出身地と誕生日を表示
-              _buildInfoRow(Icons.location_on, '出身地', data['birthplace']),
-              const SizedBox(height: 8),
-              _buildInfoRow(Icons.cake, '誕生日', data['birthday']),
-              
-              const Divider(height: 30, thickness: 1),
-              
-              // トリビア表示
-              const Text('【私のトリビア】', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  data['trivia'], // コメント/趣味 -> トリビア
-                  style: const TextStyle(fontSize: 15, height: 1.4),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('閉じる'),
-            ),
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [Icon(data['icon']), const SizedBox(width: 10), Text(data['nickname'])]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildInfoRow(Icons.location_on, '出身地', data['birthplace']),
+            _buildInfoRow(Icons.cake, '誕生日', data['birthday']),
+            const Divider(),
+            Text(data['trivia']),
           ],
-        );
-      },
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('閉じる'))],
+      ),
     );
   }
 
-  // ダイアログ内の行を作るためのヘルパー関数
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.grey),
-        const SizedBox(width: 8),
-        Text('$label：', style: const TextStyle(color: Colors.grey)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-      ],
-    );
-  }
+  Widget _buildInfoRow(IconData i, String l, String v) => Row(children: [Icon(i, size: 16), Text(' $l: $v')]);
 
   @override
   Widget build(BuildContext context) {
@@ -585,25 +285,53 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
+          // 背景とメインコンテンツ
           Positioned.fill(
             child: Container(
-              color: Colors.green.shade600, // ホーム画面の背景色（固定）
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 60), // AppBarの高さ分
-                  
-                  // ===== トリビアカード展示エリア =====
-                  Expanded(
-                    child: _displayedCards.isEmpty
-                        ? const Center(
-                            child: Text(
-                              '広場でトリビアカードを完了すると\nここに展示されます',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.white70,
+              color: Colors.green.shade600,
+              child: SafeArea( // ステータスバーを考慮
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    // 1. タイトル
+                    const Text(
+                      'ホーム',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [Shadow(blurRadius: 10, color: Colors.black45)],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // 2. プロフィールグリッド（画面中央のメイン）
+                    Expanded(
+                      child: GridView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          childAspectRatio: 1.58,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                        ),
+                        itemCount: _profiles.length,
+                        itemBuilder: (context, index) {
+                          final p = _profiles[index];
+                          return Card(
+                            elevation: 3,
+                            color: p['color'],
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                            child: InkWell(
+                              onTap: () => _showProfileDetail(p),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  CircleAvatar(backgroundColor: Colors.white54, child: Icon(p['icon'], color: Colors.black54)),
+                                  const SizedBox(height: 8),
+                                  Text(p['nickname'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis),
+                                  Text(p['birthplace'], style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                                ],
                               ),
-                              textAlign: TextAlign.center,
                             ),
                           )
                         : GridView.builder(
@@ -638,58 +366,37 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Icon(Icons.home_rounded, size: 60, color: Colors.white),
                   const SizedBox(height: 100), // アイコンとかぶらないための余白
                 ],
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 90), // 下部メニュー用のスペース
+                  ],
+                ),
               ),
             ),
           ),
 
-          // 下部メニュー (変更なし)
+          // 下部メニュー
           Align(
             alignment: Alignment.bottomCenter,
-            child: Container(
+            child: SizedBox(
               height: 120,
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: _screens.length,
-                physics: const BouncingScrollPhysics(),
-                onPageChanged: (index) {
-                  setState(() {
-                    _selectedIndex = index;
-                  });
-                },
+                onPageChanged: (index) => setState(() => _selectedIndex = index),
                 itemBuilder: (context, index) {
                   final bool isSelected = index == _selectedIndex;
                   return GestureDetector(
                     onTap: () => _onIconTapped(index),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                      margin: EdgeInsets.only(
-                        top: isSelected ? 30 : 50, // 選択中は上に上がる
-                        bottom: isSelected ? 20 : 5,
-                      ),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        // 選択中は少し光らせる演出（お好みで）
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ]
-                            : [],
-                      ),
-                      child: Center(
-                        child: Icon(
-                          _screens[index]['icon'],
-                          // 選択中はサイズ50、それ以外は30
-                          size: isSelected ? 50 : 30,
-                          // 選択中は白くハッキリ、それ以外は半透明
-                          color: isSelected
-                              ? Colors.white
-                              : Colors.white.withOpacity(0.5),
-                        ),
+                      margin: EdgeInsets.only(top: isSelected ? 30 : 50, bottom: isSelected ? 20 : 5),
+                      child: Icon(
+                        _screens[index]['icon'],
+                        size: isSelected ? 55 : 30,
+                        color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
                       ),
                     ),
                   );
