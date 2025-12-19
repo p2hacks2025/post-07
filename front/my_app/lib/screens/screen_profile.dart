@@ -8,7 +8,8 @@ import '../models/profile.dart';
 import '../models/encounter.dart';
 
 class ScreenProfile extends StatefulWidget {
-  const ScreenProfile({super.key});
+  final String? profileId; // ←追加
+  const ScreenProfile({super.key, this.profileId});
 
   @override
   State<ScreenProfile> createState() => _ScreenProfileState();
@@ -188,6 +189,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
         'birthday': _birthdayController.text,
         'birthplace': _birthplaceController.text,
         'trivia': _triviaController.text,
+        'profileId': widget.profileId
       };
       
       if (!mounted) return;
