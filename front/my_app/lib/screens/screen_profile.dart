@@ -22,9 +22,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
   final _birthplaceController = TextEditingController();
   final _heeController = TextEditingController();
 
-  // トリビア入力欄を強制的に操作するための「フォーカスノード」
   final FocusNode _triviaFocusNode = FocusNode();
-  
   final ProfileService _profileService = ProfileService();
 
   File? _profileImage;
@@ -43,6 +41,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
     super.dispose();
   }
 
+  // ... (既存の _pickImage, _selectDate, _selectPrefecture, _buildPickerToolbar, _buildWheel は変更なし) ...
   Future<void> _pickImage(bool isProfile) async {
     try {
       final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -61,11 +60,9 @@ class _ScreenProfileState extends State<ScreenProfile> {
   }
 
   Future<void> _selectDate() async {
-    // 別の入力を選んだときはキーボードを下げる
     FocusScope.of(context).unfocus();
     int tempMonth = 1;
     int tempDay = 1;
-
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -113,7 +110,6 @@ class _ScreenProfileState extends State<ScreenProfile> {
       '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
     ];
     int tempIndex = 0;
-
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -187,10 +183,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
 
   Future<void> _saveProfile() async {
     try {
-      // APIのエンドポイントURL
       final url = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/save_profile');
-      
-      // 送信するデータ
       final data = {
         'nickname': _nicknameController.text,
         'birthday': _birthdayController.text,
@@ -199,33 +192,18 @@ class _ScreenProfileState extends State<ScreenProfile> {
         'profileId': widget.profileId
       };
       
-      // API呼び出し（ローディング表示）
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('保存中...')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存中...')));
       
-      print('送信データ: $data');
-      print('送信先URL: $url');
-      
-      // POSTリクエストを送信
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
+        headers: {'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true'},
         body: jsonEncode(data),
       );
       
       if (!mounted) return;
       
-      print('レスポンスステータス: ${response.statusCode}');
-      print('レスポンスボディ: ${response.body}');
-      
-      // レスポンスの確認
       if (response.statusCode == 200) {
-        // サーバーへの保存成功後、ローカルにも保存
         final profile = Profile(
           profileId: _profileService.generateProfileId(),
           nickname: _nicknameController.text,
@@ -235,41 +213,19 @@ class _ScreenProfileState extends State<ScreenProfile> {
         );
         await _profileService.saveMyProfile(profile);
         
-        // すれ違い履歴にも自分のプロフィールを追加
-        final myEncounter = Encounter(
-          profile: profile,
-          encounterTime: DateTime.now(),
-        );
+        final myEncounter = Encounter(profile: profile, encounterTime: DateTime.now());
         await _profileService.saveEncounter(myEncounter);
-        print('✅ 自分のプロフィールをすれ違い履歴に追加しました');
         
-        // 成功した場合
-        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('プロフィールを保存しました'), backgroundColor: Colors.green),
         );
         Navigator.pop(context);
       } else {
-        // エラーが発生した場合
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('保存に失敗しました: ${response.statusCode}'),
-            backgroundColor: Colors.orange,
-            duration: const Duration(seconds: 4),
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存に失敗しました: ${response.statusCode}'), backgroundColor: Colors.orange));
       }
     } catch (e) {
-      // ネットワークエラーなどの例外処理
       if (!mounted) return;
-      print('エラー: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('接続エラー: サーバーに接続できません\nエラー詳細: $e'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('接続エラー: $e'), backgroundColor: Colors.red));
     }
   }
 
@@ -277,32 +233,37 @@ class _ScreenProfileState extends State<ScreenProfile> {
   Widget build(BuildContext context) {
     final Size screenSize = MediaQuery.of(context).size;
     
-    // === 横持ち用サイズ計算 ===
-    double cardHeight = screenSize.height * 0.9;
+    // === サイズ計算（AppBarの高さを考慮） ===
+    double appBarHeight = kToolbarHeight;
+    double availableHeight = screenSize.height - appBarHeight;
+    double cardHeight = availableHeight * 0.85;
     double cardWidth = cardHeight * 1.58;
 
-    if (cardWidth > screenSize.width * 0.95) {
-      cardWidth = screenSize.width * 0.95;
+    if (cardWidth > screenSize.width * 0.85) {
+      cardWidth = screenSize.width * 0.85;
       cardHeight = cardWidth / 1.58;
     }
 
     return GestureDetector(
-      behavior: HitTestBehavior.deferToChild,
-      // 画面の何もないところをタップしたらキーボードを閉じる
-      onTap: () {
-         FocusScope.of(context).unfocus();
-      },
+      onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: Colors.grey[300],
         resizeToAvoidBottomInset: true,
         
+        // ★追加：他の画面と統一したAppBar
+        appBar: AppBar(
+          title: const Text('プロフィール編集', style: TextStyle(fontWeight: FontWeight.bold)),
+          backgroundColor: Colors.green.shade600,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        
         body: Center(
           child: SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // === カード本体 ===
                   SizedBox(
@@ -311,21 +272,16 @@ class _ScreenProfileState extends State<ScreenProfile> {
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        border: Border.all(color: Colors.black, width: 8.0),
+                        border: Border.all(color: Colors.black, width: 6.0),
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 10,
-                            offset: const Offset(4, 4),
-                          ),
+                          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(4, 4)),
                         ],
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(12.0),
                         child: Column(
                           children: [
-                            // ニックネーム
                             TextFormField(
                               controller: _nicknameController,
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -337,135 +293,67 @@ class _ScreenProfileState extends State<ScreenProfile> {
                               ),
                             ),
                             const SizedBox(height: 8),
-
-                            // コンテンツエリア
                             Expanded(
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  // 左側：写真エリア
                                   Expanded(
                                     flex: 4,
                                     child: Column(
                                       children: [
-                                        Expanded(
-                                          child: _buildPhotoBox(
-                                            label: '写真',
-                                            icon: Icons.person,
-                                            file: _profileImage,
-                                            onTap: () => _pickImage(true),
-                                          ),
-                                        ),
+                                        Expanded(child: _buildPhotoBox(label: '写真', icon: Icons.person, file: _profileImage, onTap: () => _pickImage(true))),
                                         const SizedBox(height: 4),
-                                        Expanded(
-                                          child: _buildPhotoBox(
-                                            label: 'AI画像',
-                                            icon: Icons.smart_toy,
-                                            file: _triviaAiImage,
-                                            onTap: () => _pickImage(false),
-                                          ),
-                                        ),
+                                        Expanded(child: _buildPhotoBox(label: 'AI画像', icon: Icons.smart_toy, file: _triviaAiImage, onTap: () => _pickImage(false))),
                                       ],
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-
-                                  // 右側：入力エリア
                                   Expanded(
                                     flex: 6,
                                     child: Column(
                                       children: [
-                                        _buildSelectionField(
-                                          controller: _birthdayController,
-                                          label: '誕生日',
-                                          onTap: _selectDate,
-                                        ),
+                                        _buildSelectionField(controller: _birthdayController, label: '誕生日', onTap: _selectDate),
                                         const SizedBox(height: 4),
-                                        _buildSelectionField(
-                                          controller: _birthplaceController,
-                                          label: '出身地',
-                                          onTap: _selectPrefecture,
-                                        ),
+                                        _buildSelectionField(controller: _birthplaceController, label: '出身地', onTap: _selectPrefecture),
                                         const SizedBox(height: 4),
-
-                                        // トリビア入力
                                         Expanded(
                                           child: Row(
-                                            crossAxisAlignment: CrossAxisAlignment.stretch,
                                             children: [
-                                              // トリビア入力
                                               Expanded(
                                                 flex: 7,
                                                 child: GestureDetector(
-                                                  behavior: HitTestBehavior.opaque,
-                                                  // 枠全体をタップしたら強制的にキーボードを出す
-                                                  onTap: () {
-                                                    FocusScope.of(context).requestFocus(_triviaFocusNode);
-                                                  },
+                                                  onTap: () => FocusScope.of(context).requestFocus(_triviaFocusNode),
                                                   child: Container(
-                                                    decoration: BoxDecoration(
-                                                      border: Border.all(color: Colors.grey),
-                                                      borderRadius: BorderRadius.circular(4),
-                                                    ),
+                                                    decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(4)),
                                                     padding: const EdgeInsets.all(8),
                                                     child: TextField(
                                                       controller: _triviaController,
                                                       focusNode: _triviaFocusNode,
                                                       maxLines: null,
-                                                      expands: false, 
-                                                      textAlignVertical: TextAlignVertical.top,
                                                       style: const TextStyle(fontSize: 14),
-                                                      decoration: const InputDecoration(
-                                                        labelText: 'トリビア',
-                                                        labelStyle: TextStyle(fontSize: 10),
-                                                        hintText: '豆知識...',
-                                                        border: InputBorder.none,
-                                                        isDense: true,
-                                                        contentPadding: EdgeInsets.zero,
-                                                      ),
+                                                      decoration: const InputDecoration(labelText: 'トリビア', labelStyle: TextStyle(fontSize: 10), border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
                                                     ),
                                                   ),
                                                 ),
                                               ),
                                               const SizedBox(width: 8),
-                                              
-                                              // へぇ数 (右側に配置)
                                               Container(
                                                 width: 60,
-                                                decoration: BoxDecoration(
-                                                  color: Colors.blue[50],
-                                                  border: Border.all(color: Colors.blue),
-                                                  borderRadius: BorderRadius.circular(4),
-                                                ),
+                                                decoration: BoxDecoration(color: Colors.blue[50], border: Border.all(color: Colors.blue), borderRadius: BorderRadius.circular(4)),
                                                 child: Column(
                                                   mainAxisAlignment: MainAxisAlignment.center,
                                                   children: [
-                                                    // へぇ数入力欄
                                                     SizedBox(
                                                       height: 40,
                                                       child: TextField(
                                                         controller: _heeController,
                                                         keyboardType: TextInputType.number,
                                                         textAlign: TextAlign.center,
-                                                        style: const TextStyle(
-                                                          fontSize: 20,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: Colors.blue,
-                                                        ),
-                                                        decoration: const InputDecoration(
-                                                          border: InputBorder.none,
-                                                          hintText: '0',
-                                                          hintStyle: TextStyle(color: Colors.blue),
-                                                        ),
+                                                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue),
+                                                        decoration: const InputDecoration(border: InputBorder.none, hintText: '0'),
                                                       ),
                                                     ),
-                                                    const Text(
-                                                      'へぇ',
-                                                      style: TextStyle(
-                                                        fontSize: 10,
-                                                        color: Colors.blue,
-                                                      ),
-                                                    ),
+                                                    const Text('へぇ', style: TextStyle(fontSize: 10, color: Colors.blue)),
                                                   ],
                                                 ),
                                               ),
@@ -483,28 +371,58 @@ class _ScreenProfileState extends State<ScreenProfile> {
                       ),
                     ),
                   ),
-                  // === カードここまで ===
 
-                  const SizedBox(width: 20),
+                  const SizedBox(width: 24),
                   
-                  // 登録ボタン
-                  RotatedBox(
-                    quarterTurns: 0, 
-                    child: SizedBox(
-                      width: 100,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _saveProfile,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                  // === ボタンエリア（ホームと登録） ===
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // ホームに戻るボタン（サブボタン）
+                      SizedBox(
+                        width: 120,
+                        height: 50,
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.green.shade700,
+                            side: BorderSide(color: Colors.green.shade700, width: 2),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.home, size: 20),
+                              Text('キャンセル', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            ],
                           ),
                         ),
-                        child: const Text('登録', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      // 登録ボタン（メインボタン）
+                      SizedBox(
+                        width: 120,
+                        height: 80, // 登録ボタンを少し大きく
+                        child: ElevatedButton(
+                          onPressed: _saveProfile,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green.shade700,
+                            foregroundColor: Colors.white,
+                            elevation: 5,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.check_circle_outline, size: 28),
+                              SizedBox(height: 4),
+                              Text('登録', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -515,6 +433,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
     );
   }
 
+  // ... (残りの _buildPhotoBox, _buildSelectionField は変更なし) ...
   Widget _buildPhotoBox({
     required String label,
     required IconData icon,
