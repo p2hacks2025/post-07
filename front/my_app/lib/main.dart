@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// ★追加：日本語対応のために必要です
 import 'package:flutter_localizations/flutter_localizations.dart'; 
-
-// ▼ データを読み込むために必要です
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
-// 実際のファイル構成に合わせてimportを確認してください
+// ▼ 実際のファイル構成に合わせてimportを確認してください
 import 'screens/home_screen.dart'; 
 import 'screens/screen_information.dart'; 
 import 'screens/screen_birthday.dart'; 
-
-import 'package:uuid/uuid.dart';
+import 'screens/screen_start.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,16 +17,13 @@ void main() async {
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
-   //DeviceOrientation.portraitUp, // 縦固定
   ]);
 
-  // ▼▼▼ ここが追加したロジックです ▼▼▼
   // アプリ起動時に「登録済みかどうか」のチェックを行います
   final prefs = await SharedPreferences.getInstance();
-  // 'isRegistered' というデータを探す。なければ false (未登録) になります
   final bool isRegistered = prefs.getBool('isRegistered') ?? false;
 
-    // ■ ユーザ固有IDを取得 or 初回生成
+  // ■ ユーザ固有IDを取得 or 初回生成
   String? userId = prefs.getString('user_id');
   if (userId == null) {
     userId = const Uuid().v4(); // UUIDを生成
@@ -38,26 +32,26 @@ void main() async {
   print("User ID: $userId"); // デバッグ用
 
   // 結果をMyAppに渡してアプリを起動します
-  runApp(MyApp(isRegistered: isRegistered , userId: userId,));
+  runApp(MyApp(isRegistered: isRegistered, userId: userId));
 }
 
 class MyApp extends StatelessWidget {
-  // ▼ 登録済みかどうかを受け取るための変数
   final bool isRegistered;
   final String userId;
 
   const MyApp({
     super.key, 
-    required this.isRegistered, // メイン関数から受け取ります
+    required this.isRegistered, 
     required this.userId,
   });
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false, // デバッグ帯を消す
       title: 'Flutter Template',
       
-      // ★★★ ここが日本語入力対応のための追加部分です ★★★
+      // 日本語入力対応
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -66,18 +60,17 @@ class MyApp extends StatelessWidget {
       supportedLocales: const [
         Locale('ja', 'JP'), // 日本語を設定
       ],
-      // ★★★ ここまで ★★★
 
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
       
-      // ▼▼▼ ここが分岐ポイント ▼▼▼
-      // 登録済みなら HomeScreen、まだなら ScreenInformation を表示
-      home: isRegistered ? const HomeScreen() : const ScreenInformation(),
+      // ★★★ ここを修正しました ★★★
+      // いきなり分岐せず、まずはスタート画面を表示します
+      home: ScreenStart(isRegistered: isRegistered),
       
-      // ルーティング設定（他の画面への移動用）
+      // ルーティング設定
       routes: {
         '/home': (context) => const HomeScreen(),
         '/birthday': (context) => const ScreenBirthday(),

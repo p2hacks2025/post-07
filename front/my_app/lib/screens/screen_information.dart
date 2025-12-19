@@ -2,9 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http; 
-import 'home_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import 'home_screen.dart'; 
 
 class ScreenInformation extends StatefulWidget {
   const ScreenInformation({super.key});
@@ -259,13 +258,6 @@ class _ScreenInformationState extends State<ScreenInformation> {
         const SnackBar(content: Text('サーバーに接続できませんでした')),
       );
     }
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存しました')));
-    
-    // HomeScreenに遷移
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
-    );
   }
 
   @override
@@ -342,7 +334,7 @@ class _ScreenInformationState extends State<ScreenInformation> {
                                       children: [
                                         Expanded(
                                           child: _buildPhotoBox(
-                                            label: '写真',
+                                            label: 'プロフィール写真を選択',
                                             icon: Icons.person,
                                             file: _profileImage,
                                             onTap: () => _pickImage(true),
@@ -351,7 +343,7 @@ class _ScreenInformationState extends State<ScreenInformation> {
                                         const SizedBox(height: 4),
                                         Expanded(
                                           child: _buildPhotoBox(
-                                            label: 'AI画像',
+                                            label: 'トリビアのAI生成画像',
                                             icon: Icons.smart_toy,
                                             file: _triviaAiImage,
                                             onTap: () => _pickImage(false),
@@ -424,7 +416,7 @@ class _ScreenInformationState extends State<ScreenInformation> {
                                                           fontSize: 14),
                                                       decoration:
                                                           const InputDecoration(
-                                                        labelText: 'トリビア',
+                                                        labelText: '自分の知ってるトリビアを入力',
                                                         labelStyle: TextStyle(
                                                             fontSize: 10),
                                                         hintText: '豆知識...',
@@ -523,33 +515,6 @@ class _ScreenInformationState extends State<ScreenInformation> {
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 8),
-
-                    // 🧪 開発用：ホーム直行ボタン
-                    SizedBox(
-                      width: 100,
-                      height: 36,
-                      child: OutlinedButton(
-                        onPressed: () async {
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setBool('isRegistered', true);
-
-                          if (!mounted) return;
-                          Navigator.pushReplacementNamed(context, '/home');
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
-                          padding: EdgeInsets.zero,
-                        ),
-                        child: const Text(
-                          'DEV → HOME',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-
                 ],
               ),
             ),
@@ -577,7 +542,7 @@ class _ScreenInformationState extends State<ScreenInformation> {
         child: file != null
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(5),
-                child: Image.file(file, fit: BoxFit.cover),
+                child: ClipOval(child: Image.file(file, fit: BoxFit.cover)),
               )
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
