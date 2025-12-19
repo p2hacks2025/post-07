@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/profile_service.dart';
 import '../models/encounter.dart';
+import '../models/profile.dart';
 
 /// すれ違い履歴を表示する画面
 class ScreenHistory extends StatefulWidget {
@@ -35,6 +36,48 @@ class _ScreenHistoryState extends State<ScreenHistory> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  /// サーバーから受信したプロフィールを履歴に保存
+  Future<void> saveReceivedProfile(Map<String, dynamic> profileData) async {
+    try {
+      // プロフィールデータからProfileオブジェクトを作成
+      final profile = Profile.fromJson(profileData);
+      
+      // 現在の日時ですれ違い情報を作成
+      final encounter = Encounter(
+        profile: profile,
+        encounterTime: DateTime.now(),
+      );
+      
+      // ProfileServiceを使って保存
+      await _profileService.saveEncounter(encounter);
+      
+      // 履歴を再読み込みして画面を更新
+      await _loadEncounterHistory();
+      
+      // 成功メッセージを表示（オプション）
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${profile.nickname}さんのプロフィールを保存しました'),
+            backgroundColor: Colors.teal.shade600,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('プロフィール保存エラー: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('プロフィールの保存に失敗しました'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 

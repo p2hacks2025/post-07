@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../services/profile_service.dart';
+import '../models/profile.dart';
+import '../models/encounter.dart';
 
 class ScreenProfile extends StatefulWidget {
   final String? profileId; // ←追加
@@ -21,6 +24,8 @@ class _ScreenProfileState extends State<ScreenProfile> {
 
   // トリビア入力欄を強制的に操作するための「フォーカスノード」
   final FocusNode _triviaFocusNode = FocusNode();
+  
+  final ProfileService _profileService = ProfileService();
 
   File? _profileImage;
   File? _triviaAiImage;
@@ -220,7 +225,26 @@ class _ScreenProfileState extends State<ScreenProfile> {
       
       // レスポンスの確認
       if (response.statusCode == 200) {
+        // サーバーへの保存成功後、ローカルにも保存
+        final profile = Profile(
+          profileId: _profileService.generateProfileId(),
+          nickname: _nicknameController.text,
+          birthday: _birthdayController.text,
+          hometown: _birthplaceController.text,
+          trivia: _triviaController.text,
+        );
+        await _profileService.saveMyProfile(profile);
+        
+        // すれ違い履歴にも自分のプロフィールを追加
+        final myEncounter = Encounter(
+          profile: profile,
+          encounterTime: DateTime.now(),
+        );
+        await _profileService.saveEncounter(myEncounter);
+        print('✅ 自分のプロフィールをすれ違い履歴に追加しました');
+        
         // 成功した場合
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('プロフィールを保存しました'), backgroundColor: Colors.green),
         );
