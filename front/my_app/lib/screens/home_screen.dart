@@ -130,20 +130,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // 繰り返しスキャンを開始（Timer.periodicで制御）
-  void _startRepeatingScan() {
-    if (_scanTimer?.isActive ?? false) return;
-    
-    // 最初のスキャンをすぐに実行
-    _startBleScan();
-    
-    // 15秒ごとに定期的にスキャン
-    _scanTimer = Timer.periodic(const Duration(seconds: 15), (timer) async {
-      if (!_isScanning && mounted) {
-        await _startBleScan();
-      }
-    });
-  }
+  // --- BLE関連のロジック ---
+  void _startRepeatingScan() => _startBleScan();
 
   Future<void> _startBleScan() async {
     if (_isScanning) return;
@@ -173,26 +161,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (detectedProfileId != null && mounted) {
         await _handleEncounter(detectedProfileId!);
-
-        // すれ違い成功画面へ遷移
-        if (mounted) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ScreenEncounter()),
-          );
-        }
-
-        // 画面から戻ってきてもTimerが自動的に再スキャンを実行
-      } else {
-        // 検出されなかった場合（Timerが自動的に再スキャンを実行）
-        print('\n❌ すれ違い検出なし（総チェック回数: $checkCount）');
-        print('🔄 次のスキャンはTimerが自動実行します');
-        print('========================================\n');
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const ScreenEncounter()));
+      }
+      
+      if (mounted) {
+        await Future.delayed(const Duration(seconds: 2));
+        _startRepeatingScan();
       }
     } catch (e) {
-      print('BLEスキャンエラー: $e');
       _isScanning = false;
-      // エラーが発生してもTimerが自動的に再試行
+      await Future.delayed(const Duration(seconds: 2));
+      _startRepeatingScan();
     }
   }
 
@@ -239,7 +218,6 @@ class _HomeScreenState extends State<HomeScreen> {
     {'title': '履歴', 'icon': Icons.history_rounded, 'color': Colors.purple.shade400},
   ];
 
-  // アイコンをタップしたときの処理
   void _onIconTapped(int index) {
     if (index == _selectedIndex) {
       Widget? target;
@@ -333,39 +311,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ],
                               ),
                             ),
-                          )
-                        : GridView.builder(
-                            padding: const EdgeInsets.all(12),
-                            physics: const BouncingScrollPhysics(), // スクロール可能に
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3, // 3列
-                              childAspectRatio: 2.5, // 横長の名刺型（コンパクト）
-                              crossAxisSpacing: 6,
-                              mainAxisSpacing: 6,
-                            ),
-                            itemCount: _displayedCards.length,
-                            itemBuilder: (context, index) {
-                              final card = _displayedCards[index];
-                              return _buildTriviaCard(card);
-                            },
-                          ),
-                  ),
-                  
-                  // ホームのタイトル部分（下半分）
-                  const SizedBox(height: 10),
-                  const Text(
-                    'ホーム',
-                    style: TextStyle(
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [Shadow(blurRadius: 10, color: Colors.black45)],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Icon(Icons.home_rounded, size: 60, color: Colors.white),
-                  const SizedBox(height: 100), // アイコンとかぶらないための余白
-                ],
                           );
                         },
                       ),
@@ -405,88 +350,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // トリビアカードのウィジェットを構築（名刺型）
-  Widget _buildTriviaCard(TriviaCard card) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // タイトル
-            Text(
-              card.title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.redAccent,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            
-            // コンテンツ
-            Expanded(
-              child: Text(
-                card.content,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.black87,
-                  height: 1.3,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            
-            const SizedBox(height: 4),
-            
-            // へーカウントと日付
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.lightbulb, size: 14, color: Colors.amber),
-                    const SizedBox(width: 2),
-                    Text(
-                      '${card.heeCount}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.amber,
-                      ),
-                    ),
-                  ],
-                ),
-                Text(
-                  '${card.completedAt.month}/${card.completedAt.day}',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
