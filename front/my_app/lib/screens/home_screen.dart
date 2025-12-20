@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
 import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
 
 // 遷移先の各画面（プロジェクトに合わせてインポートパスを確認してください）
 import 'screen_profile.dart';
@@ -17,9 +19,14 @@ import '../services/profile_service.dart';
 import '../models/profile.dart';
 import '../models/encounter.dart';
 
+const int manufacturerId = 0x1234; // 任意の2byte (0xFFFF以下)
+const int appVersion = 1; // 例: アプリのバージョン番号
+const int scanDurationSec = 5; // Scan時間（秒）
+const int advertiseDurationSec = 5; // Advertise時間（秒）
+
 void main() {
   runApp(
-    MaterialApp(
+    const MaterialApp(
       home: HomeScreen(
         profileJson: {
           "uid": "debug-uid-001",
@@ -28,7 +35,6 @@ void main() {
     ),
   );
 }
-
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic> profileJson;
@@ -46,29 +52,78 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   StreamSubscription? _scanSubscription;
   final FlutterBlePeripheral _blePeripheral = FlutterBlePeripheral();
 
-  static const String customServiceUuid = '0000FFF0-0000-1000-8000-00805f9b34fb';
+  static const String customServiceUuid =
+      '0000FFF0-0000-1000-8000-00805f9b34fb';
 
   int _selectedIndex = 0;
   late PageController _pageController;
   bool _isScanning = false;
+  bool _isAdvertising = false;
   final ProfileService _profileService = ProfileService();
   String? _myProfileId;
 
+  late Uint8List _myProfileIdBytes;
+  StreamSubscription? _scanSub;
+  Timer? _mainLoopTimer;
+  
+
   // ダミーデータ（プロフィールリスト）
   final List<Map<String, dynamic>> _profiles = [
-    {'nickname': 'タロウ', 'birthday': '1月15日', 'birthplace': '北海道', 'trivia': '実は犬より猫派です。', 'color': Colors.blue.shade100, 'icon': Icons.face},
-    {'nickname': 'はなちゃん', 'birthday': '5月22日', 'birthplace': '東京都', 'trivia': '砂糖は3本入れます！', 'color': Colors.pink.shade100, 'icon': Icons.face_3},
-    {'nickname': 'イチロー', 'birthday': '10月22日', 'birthplace': '愛知県', 'trivia': '焚き火の匂いが好き。', 'color': Colors.green.shade100, 'icon': Icons.face_6},
-    {'nickname': 'ゆう', 'birthday': '3月3日', 'birthplace': '福岡県', 'trivia': '音ゲー大会に出ました。', 'color': Colors.orange.shade100, 'icon': Icons.face_5},
-    {'nickname': 'ケンタ', 'birthday': '8月10日', 'birthplace': '大阪府', 'trivia': 'お好み焼きはおかずじゃない。', 'color': Colors.purple.shade100, 'icon': Icons.face_4},
-    {'nickname': 'みさき', 'birthday': '7月20日', 'birthplace': '沖縄県', 'trivia': '泳げないダイバーです。', 'color': Colors.cyan.shade100, 'icon': Icons.face_2},
+    {
+      'nickname': 'タロウ',
+      'birthday': '1月15日',
+      'birthplace': '北海道',
+      'trivia': '実は犬より猫派です。',
+      'color': Colors.blue.shade100,
+      'icon': Icons.face
+    },
+    {
+      'nickname': 'はなちゃん',
+      'birthday': '5月22日',
+      'birthplace': '東京都',
+      'trivia': '砂糖は3本入れます！',
+      'color': Colors.pink.shade100,
+      'icon': Icons.face_3
+    },
+    {
+      'nickname': 'イチロー',
+      'birthday': '10月22日',
+      'birthplace': '愛知県',
+      'trivia': '焚き火の匂いが好き。',
+      'color': Colors.green.shade100,
+      'icon': Icons.face_6
+    },
+    {
+      'nickname': 'ゆう',
+      'birthday': '3月3日',
+      'birthplace': '福岡県',
+      'trivia': '音ゲー大会に出ました。',
+      'color': Colors.orange.shade100,
+      'icon': Icons.face_5
+    },
+    {
+      'nickname': 'ケンタ',
+      'birthday': '8月10日',
+      'birthplace': '大阪府',
+      'trivia': 'お好み焼きはおかずじゃない。',
+      'color': Colors.purple.shade100,
+      'icon': Icons.face_4
+    },
+    {
+      'nickname': 'みさき',
+      'birthday': '7月20日',
+      'birthplace': '沖縄県',
+      'trivia': '泳げないダイバーです。',
+      'color': Colors.cyan.shade100,
+      'icon': Icons.face_2
+    },
   ];
 
   @override
   void initState() {
     super.initState();
     // フッターのアイコン間隔を調整するPageController
-     // ★ JSON から uid を取得
+    // ★ JSON から uid を取得
     _myProfileId = widget.profileJson["uid"] as String?;
 
     _pageController = PageController(
@@ -76,29 +131,117 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       viewportFraction: 0.15, // アイコンの密度を調整
     );
     _initializeProfile();
+    _startMainLoop();
+  }
+
+  Future<void> _initProfileId() async {
+    // profileIdは16byteバイナリUUID（uuidパッケージ利用）
+    _myProfileId = const Uuid().v4();
+    _initProfileIdBytes();
+  }
+
+  void _initProfileIdBytes() {
+    // Uuid.parse()はList<int>型を返すので、Uint8List.fromList()で型変換
+    // BLE Manufacturer DataはUint8List型のみ受け付けるため
+    _myProfileIdBytes = Uint8List.fromList(
+      Uuid.parse(_myProfileId!)
+    );
   }
 
   Future<void> _initializeProfile() async {
     Profile? myProfile = await _profileService.loadMyProfile();
     if (myProfile == null) {
       _myProfileId = _profileService.generateProfileId();
-      myProfile = Profile(profileId: _myProfileId!, nickname: 'ゲスト', birthday: '', birthplace: '', trivia: '');
+      myProfile = Profile(
+          profileId: _myProfileId!,
+          nickname: 'ゲスト',
+          birthday: '',
+          birthplace: '',
+          trivia: '');
       await _profileService.saveMyProfile(myProfile);
     } else {
       _myProfileId = myProfile.profileId;
     }
-    await _startBleAdvertising();
-    _startRepeatingScan();
+
+    // ★★★ エミュレーター対策：ここをコメントアウトしました ★★★
+    // エミュレーターはBluetoothを使えないため、ここでエラーになります。
+    // 実機でテストするときは、ここのコメントアウト（//）を外してください。
+    
+    // await _startBleAdvertising(); 
+    // _startRepeatingScan();
   }
 
   @override
   void dispose() {
+    _mainLoopTimer?.cancel();
     FlutterBluePlus.stopScan();
+    _scanSub?.cancel();
     _stopBleAdvertising();
-    _scanSubscription?.cancel();
     _pageController.dispose();
     super.dispose();
   }
+
+  // ===============================
+  // メインループ: Scan→Advertiseを交互に繰り返す
+  // ===============================
+  void _startMainLoop() {
+    // まずScanから開始
+    _mainLoopTimer = Timer.periodic(Duration(seconds: scanDurationSec + advertiseDurationSec), (timer) async {
+      await _startBleScan();
+      await Future.delayed(Duration(seconds: scanDurationSec));
+      await FlutterBluePlus.stopScan();
+      await _scanSub?.cancel();
+      _isScanning = false;
+      await _startBleAdvertising();
+      await Future.delayed(Duration(seconds: advertiseDurationSec));
+      await _stopBleAdvertising();
+      _isAdvertising = false;
+    });
+    // 最初だけ即時Scan
+    _startBleScan();
+    Future.delayed(Duration(seconds: scanDurationSec), () async {
+      await FlutterBluePlus.stopScan();
+      await _scanSub?.cancel();
+      _isScanning = false;
+      await _startBleAdvertising();
+      await Future.delayed(Duration(seconds: advertiseDurationSec));
+      await _stopBleAdvertising();
+      _isAdvertising = false;
+    });
+  }
+
+  // ===============================
+  // BLE: Manufacturer DataでAdvertise（16byteバイナリUUID）
+  // ===============================
+  Future<void> _startBleAdvertising() async {
+    if (_isAdvertising) return;
+    _isAdvertising = true;
+    try {
+      // profileId(16byte) + appVersion(1byte) → 17byte
+      final data = Uint8List(17)
+        ..setRange(0, 16, _myProfileIdBytes)
+        ..[16] = appVersion;
+      final advertiseData = AdvertiseData(
+        manufacturerId: manufacturerId,
+        manufacturerData: data,
+        includePowerLevel: true,
+      );
+      await _blePeripheral.start(advertiseData: advertiseData);
+      debugPrint('📢 BLE広告開始 (profileId: $_myProfileId, version: $appVersion)');
+    } catch (e) {
+      debugPrint('❌ BLE広告エラー: $e');
+    }
+  }
+
+  Future<void> _stopBleAdvertising() async {
+    try {
+      await _blePeripheral.stop();
+    } catch (_) {}
+  }
+
+
+
+
 
   // --- BLE関連ロジック（省略なし） ---
   void _startRepeatingScan() => _startBleScan();
@@ -107,18 +250,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (_isScanning) return;
     _isScanning = true;
     try {
-      if (await FlutterBluePlus.isSupported == false) return;
       await FlutterBluePlus.startScan(
-        withServices: [Guid(customServiceUuid)],
-        timeout: const Duration(seconds: 4),
+        timeout: Duration(seconds: scanDurationSec),
       );
-      
+
       String? detectedProfileId;
       _scanSubscription = FlutterBluePlus.scanResults.listen((results) {
         for (var result in results) {
           final serviceData = result.advertisementData.serviceData;
           if (serviceData.containsKey(Guid(customServiceUuid))) {
-            detectedProfileId = utf8.decode(serviceData[Guid(customServiceUuid)]!);
+            detectedProfileId =
+                utf8.decode(serviceData[Guid(customServiceUuid)]!);
             break;
           }
         }
@@ -130,49 +272,61 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
       if (detectedProfileId != null && mounted) {
         await _handleEncounter(detectedProfileId!);
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const ScreenEncounter()));
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => const ScreenEncounter()));
       }
-      
+
       if (mounted) {
         await Future.delayed(const Duration(seconds: 2));
         _startRepeatingScan();
       }
     } catch (e) {
+      debugPrint('❌ BLEスキャンエラー: $e');
       _isScanning = false;
       await Future.delayed(const Duration(seconds: 2));
       _startRepeatingScan();
     }
   }
 
-  Future<void> _startBleAdvertising() async {
-    if (_myProfileId == null) return;
-    try {
-      final AdvertiseData advertiseData = AdvertiseData(
-        serviceUuid: customServiceUuid,
-        serviceData: utf8.encode(_myProfileId!),
-        includePowerLevel: true,
-      );
-      await _blePeripheral.start(advertiseData: advertiseData);
-    } catch (e) { debugPrint('BLE Advertising Error: $e'); }
-  }
+  
 
-  Future<void> _stopBleAdvertising() async => await _blePeripheral.stop();
+  
 
   Future<void> _handleEncounter(String id) async {
     Profile? profile = await _fetchProfileFromServer(id);
-    profile ??= Profile(profileId: id, nickname: 'すれ違った人', birthday: '', birthplace: '', trivia: '');
-    await _profileService.saveEncounter(Encounter(profile: profile, encounterTime: DateTime.now()));
+    profile ??= Profile(
+        profileId: id,
+        nickname: 'すれ違った人',
+        birthday: '',
+        birthplace: '',
+        trivia: '');
+    await _profileService.saveEncounter(
+        Encounter(profile: profile, encounterTime: DateTime.now()));
+  }
+
+  Future<void> stopScan() async {
+    await FlutterBluePlus.stopScan();
   }
 
   Future<Profile?> _fetchProfileFromServer(String id) async {
     try {
-      final url = Uri.parse('https://saliently-multiciliated-jacqui.ngrok-free.dev/get_profile');
-      final res = await http.get(url, headers: {'ngrok-skip-browser-warning': 'true'}).timeout(const Duration(seconds: 5));
+      final url = Uri.parse(
+          'https://saliently-multiciliated-jacqui.ngrok-free.dev/get_profile');
+      final res = await http.get(url, headers: {
+        'ngrok-skip-browser-warning': 'true'
+      }).timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
-        return Profile(profileId: id, nickname: d['nickname'] ?? '', birthday: d['birthday'] ?? '', birthplace: d['birthplace'] ?? '', trivia: d['trivia'] ?? '');
+        return Profile(
+            profileId: id,
+            nickname: d['nickname'] ?? '',
+            birthday: d['birthday'] ?? '',
+            birthplace: d['birthplace'] ?? '',
+            trivia: d['trivia'] ?? '');
       }
-    } catch (e) { return null; }
+    } catch (e) {
+      return null;
+    }
     return null;
   }
 
@@ -191,17 +345,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (index == _selectedIndex) {
       Widget? target;
       switch (index) {
-        case 1: target = ScreenProfile(profileJson:
-                      widget.profileJson); break;
-        case 2: target = const ScreenMap(); break;
-        case 3: target = const ScreenBirthday(); break;
-        case 4: target = const ScreenEleven(); break; // 前回の画面11
-        case 5: target = const ScreenAchieve(); break;
-        case 6: target = const ScreenHistory(); break;
+        case 1:
+          target = ScreenProfile(profileJson: widget.profileJson);
+          break;
+        case 2:
+          target = const ScreenMap();
+          break;
+        case 3:
+          target = const ScreenBirthday();
+          break;
+        case 4:
+          target = const ScreenEleven();
+          break; // 前回の画面11
+        case 5:
+          target = const ScreenAchieve();
+          break;
+        case 6:
+          target = const ScreenHistory();
+          break;
       }
-      if (target != null) Navigator.push(context, MaterialPageRoute(builder: (context) => target!));
+      if (target != null) {
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => target!));
+      }
     } else {
-      _pageController.animateToPage(index, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      _pageController.animateToPage(index,
+          duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
     }
   }
 
@@ -210,7 +379,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(children: [Icon(data['icon']), const SizedBox(width: 10), Text(data['nickname'])]),
+        title: Row(children: [
+          Icon(data['icon']),
+          const SizedBox(width: 10),
+          Text(data['nickname'])
+        ]),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -220,12 +393,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Text(data['trivia']),
           ],
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('閉じる'))],
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context), child: const Text('閉じる'))
+        ],
       ),
     );
   }
 
-  Widget _buildInfoRow(IconData i, String l, String v) => Row(children: [Icon(i, size: 16), Text(' $l: $v')]);
+  Widget _buildInfoRow(IconData i, String l, String v) =>
+      Row(children: [Icon(i, size: 16), Text(' $l: $v')]);
 
   @override
   Widget build(BuildContext context) {
@@ -254,7 +431,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     Expanded(
                       child: GridView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 3,
                           childAspectRatio: 1.5,
                           crossAxisSpacing: 10,
@@ -266,15 +444,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           return Card(
                             elevation: 4,
                             color: p['color'],
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15)),
                             child: InkWell(
                               onTap: () => _showProfileDetail(p),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  CircleAvatar(backgroundColor: Colors.white70, child: Icon(p['icon'], color: Colors.black54)),
+                                  CircleAvatar(
+                                      backgroundColor: Colors.white70,
+                                      child: Icon(p['icon'],
+                                          color: Colors.black54)),
                                   const SizedBox(height: 8),
-                                  Text(p['nickname'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis),
+                                  Text(p['nickname'],
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13),
+                                      overflow: TextOverflow.ellipsis),
                                 ],
                               ),
                             ),
@@ -283,7 +469,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                     ),
                     // フッターとの干渉を防ぐためのスペース（少し狭めました）
-                    const SizedBox(height: 70), 
+                    const SizedBox(height: 70),
                   ],
                 ),
               ),
@@ -297,12 +483,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               height: 85, // 全体の高さをスリムに調整
               decoration: BoxDecoration(
                 color: Colors.black.withOpacity(0.15), // 背景を少し濃くして「バー」感を演出
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(25)),
               ),
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: _screens.length,
-                onPageChanged: (index) => setState(() => _selectedIndex = index),
+                onPageChanged: (index) =>
+                    setState(() => _selectedIndex = index),
                 itemBuilder: (context, index) {
                   final bool isSelected = index == _selectedIndex;
                   return GestureDetector(
@@ -311,13 +499,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       duration: const Duration(milliseconds: 300),
                       // topを小さくすることでアイコンを高い位置に維持
                       margin: EdgeInsets.only(
-                        top: isSelected ? 8 : 25, 
+                        top: isSelected ? 8 : 25,
                         bottom: isSelected ? 12 : 5,
                       ),
                       child: Icon(
                         _screens[index]['icon'],
                         size: isSelected ? 50 : 32, // 選択時のサイズを微調整
-                        color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
+                        color: isSelected
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.5),
                       ),
                     ),
                   );
