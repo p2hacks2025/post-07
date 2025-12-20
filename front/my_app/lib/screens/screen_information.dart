@@ -221,7 +221,59 @@ class _ScreenInformationState extends State<ScreenInformation> {
                     ? const CircularProgressIndicator()
                     : const Text('登録'),
               ),
-            ],
+      ),
+    );
+  }
+
+  // AI画像表示エリア (★タップ無効化済み)
+  Widget _buildAiImageArea() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.blueGrey[50],
+        border: Border.all(color: Theme.of(context).colorScheme.primary.withAlpha((0.3 * 255).round())),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(5),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator()) // 生成中
+            : _resultImageUrl != null
+                ? Image.network(_resultImageUrl!, fit: BoxFit.cover) // サーバーからの画像
+                : const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.auto_awesome, color: Colors.blue, size: 24),
+                      Text('AIが画像を生成します', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: Colors.blue)),
+                    ],
+                  ),
+      ),
+    );
+  }
+
+  Widget _buildTriviaInput() {
+    return GestureDetector(
+      onTap: () => _triviaFocusNode.requestFocus(),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        padding: const EdgeInsets.all(8),
+        child: TextField(
+          controller: _triviaController,
+          focusNode: _triviaFocusNode,
+          onChanged: (value) => setState(() {}),
+          maxLines: null,
+          expands: true,
+          textAlignVertical: TextAlignVertical.top,
+          style: const TextStyle(fontSize: 14),
+          decoration: const InputDecoration(
+            labelText: '自分の知ってるトリビアを入力',
+            labelStyle: TextStyle(fontSize: 10),
+            hintText: '豆知識...',
+            border: InputBorder.none,
+            isDense: true,
           ),
         ),
       ),

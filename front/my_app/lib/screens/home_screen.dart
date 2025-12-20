@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
 import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
 
 import 'package:uuid/uuid.dart';
 
@@ -148,11 +149,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       Uuid.parse(_myProfileId!)
     );
   }
-
-
-
-
-
 
   Future<void> _initializeProfile() async {
     Profile? myProfile = await _profileService.loadMyProfile();

@@ -96,7 +96,7 @@ Widget _buildDateCell(int day, int month) {
         width: 2,
       ),
       boxShadow: isCollected
-          ? [BoxShadow(color: Colors.redAccent.withOpacity(0.5), blurRadius: 4)]
+          ? [BoxShadow(color: Colors.redAccent.withAlpha((0.5 * 255).round()), blurRadius: 4)]
           : [],
     ),
     child: InkWell(

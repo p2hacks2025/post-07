@@ -32,7 +32,7 @@ class _ScreenHistoryState extends State<ScreenHistory> {
         _isLoading = false;
       });
     } catch (e) {
-      print('履歴読み込みエラー: $e');
+      debugPrint('履歴読み込みエラー: $e');
       setState(() {
         _isLoading = false;
       });
@@ -68,7 +68,7 @@ class _ScreenHistoryState extends State<ScreenHistory> {
         );
       }
     } catch (e) {
-      print('プロフィール保存エラー: $e');
+      debugPrint('プロフィール保存エラー: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
