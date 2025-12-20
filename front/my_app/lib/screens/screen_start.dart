@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/screens/screen_information.dart';
 import 'home_screen.dart';
 
 class ScreenStart extends StatefulWidget {
@@ -26,6 +27,11 @@ class _ScreenStartState extends State<ScreenStart> {
     await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
+     // 🔍 デバッグ：idだけのJSON確認
+    debugPrint("現在の profileJson:");
+    debugPrint(widget.profileJson.toString());
+    
+    // 3. 次の画面へ遷移
     if (widget.isRegistered) {
       Navigator.pushReplacement(
         context,
