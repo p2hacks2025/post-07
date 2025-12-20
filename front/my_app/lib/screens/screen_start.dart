@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/screens/screen_information.dart';
 import 'home_screen.dart';
-import 'screen_information.dart';
 
 class ScreenStart extends StatefulWidget {
   final bool isRegistered;
@@ -37,6 +37,7 @@ class _ScreenStartState extends State<ScreenStart> {
         context,
         MaterialPageRoute(builder: (context) => ScreenInformation(profileJson: widget.profileJson)),
       );
+    }
     }
   }
 

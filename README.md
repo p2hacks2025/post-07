@@ -1,7 +1,7 @@
 # P2HACKS2025 アピールシート
 
 ## プロダクト名
-ロゴ
+<img width="386" height="196" alt="image-cut" src="https://github.com/user-attachments/assets/d2b9e71e-8ca5-4f75-90f6-4c0fd8e707dc" />
 
 Trinkle（トリンクル）
 
@@ -14,7 +14,7 @@ Trinkle（トリンクル）
 
 何気ないすれちがいが、小さな発見や会話のきっかけに変わっていく。
 
-あの頃、緑のランプに心躍らせた記憶を、今の時代らしくアップデートした、現代版のデジタル・プロフィール交換です。
+あの頃、緑のランプに心躍らせた記憶を、今の時代らしくアップデートした、現代版のデジタル・プロフィール交換アプリです。
 
 ## 対象ユーザ
 ニンテンドー3DSの「すれちがい通信」や「トリビアの泉」に懐かしさを感じる20代〜30代のユーザー。
@@ -22,7 +22,7 @@ Trinkle（トリンクル）
 移動中やキャンパス内など、手持無沙汰な時間に気軽に新しい知識や会話のネタを得たい学生・社会人を想定しています。
 
 ## 利用の流れ
-1.アプリをインストールし、プロフィールと「あなたのトリビア」を登録
+1.アプリをインストールし、プロフィールと「あなたの知っているトリビア」を登録
 
 2.アプリを起動したまま、日常生活を過ごす
 
@@ -40,7 +40,13 @@ Trinkle（トリンクル）
 ・普段関わることのない人との、ゆるやかなつながりを創出
 
 ## スクリーンショット(任意)
+<img width="2400" height="1080" alt="image" src="https://github.com/user-attachments/assets/596faaa6-2e4a-47d3-9829-edf6fcc53db5" />
 
+<img width="2400" height="1080" alt="image" src="https://github.com/user-attachments/assets/a6a24b24-9a63-4410-851b-0fae5e04a16e" />
+
+<img width="2400" height="1080" alt="image" src="https://github.com/user-attachments/assets/546a75f5-1993-4f1e-beef-2031a3d51683" />
+
+<img width="2400" height="1080" alt="image" src="https://github.com/user-attachments/assets/349de3c5-7fb0-479b-ac4e-d2d3fc868e80" />
 
 ## 開発体制
 
@@ -65,16 +71,25 @@ Trinkle（トリンクル）
 ## 開発技術
 
 ### 利用したプログラミング言語
-- Flutter
+- Dart
 - Python
 
 ### 利用したフレームワーク・ライブラリ
-- Gemini API
-- Stable Diffusion API (予定)
+- FastAPI
+- Flutter
 
 ### その他開発に使用したツール・サービス
-- Github
-- ChatGPT
-- Gemini
+- Android studio
 - Blender
+- Canva
+- ChatGPT
+- Figma
+- Firebase
+- Gemini API
+- GitHub
+- GitHub Copilot
+- Google Gemini
+- ngrok
+- Stable Diffusion
 - Visual Studio Code
+- Bluetooth Low Energy
