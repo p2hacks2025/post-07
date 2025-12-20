@@ -596,10 +596,17 @@ class _ScreenProfileState extends State<ScreenProfile> {
         }),
       );
       if (response.statusCode == 200) {
+        setState(() {
+          _currentVer = nextVer; // ★ 保存成功後に反映
+        });
+
+        widget.profileJson['ver'] = nextVer; // ← これ超重要
+
         final profile = Profile(
           profileId: _profileService.generateProfileId(),
           nickname: _nicknameController.text,
           birthday: _birthdayController.text,
+          birthplace: _birthplaceController.text,
           birthplace: _birthplaceController.text,
           trivia: _triviaController.text,
         );
@@ -608,6 +615,8 @@ class _ScreenProfileState extends State<ScreenProfile> {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('保存しました'), backgroundColor: Colors.green));
         Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存に失敗しました: ${response.statusCode}'), backgroundColor: Colors.orange));
       }
     } catch (e) {
       ScaffoldMessenger.of(context)

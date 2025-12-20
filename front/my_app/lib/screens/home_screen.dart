@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
@@ -16,6 +17,11 @@ import 'screen_history.dart';
 import '../services/profile_service.dart';
 import '../models/profile.dart';
 import '../models/encounter.dart';
+
+const int manufacturerId = 0x1234; // 任意の2byte (0xFFFF以下)
+const int appVersion = 1; // 例: アプリのバージョン番号
+const int scanDurationSec = 5; // Scan時間（秒）
+const int advertiseDurationSec = 5; // Advertise時間（秒）
 
 void main() {
   runApp(
@@ -51,8 +57,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _selectedIndex = 0;
   late PageController _pageController;
   bool _isScanning = false;
+  bool _isAdvertising = false;
   final ProfileService _profileService = ProfileService();
   String? _myProfileId;
+
+  late Uint8List _myProfileIdBytes;
+  StreamSubscription? _scanSub;
+  Timer? _mainLoopTimer;
+  
 
   // ダミーデータ（プロフィールリスト）
   final List<Map<String, dynamic>> _profiles = [
@@ -118,7 +130,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       viewportFraction: 0.15, // アイコンの密度を調整
     );
     _initializeProfile();
+    _startMainLoop();
   }
+
+  Future<void> _initProfileId() async {
+    // profileIdは16byteバイナリUUID（uuidパッケージ利用）
+    _myProfileId = const Uuid().v4();
+    _initProfileIdBytes();
+  }
+
+  void _initProfileIdBytes() {
+    // Uuid.parse()はList<int>型を返すので、Uint8List.fromList()で型変換
+    // BLE Manufacturer DataはUint8List型のみ受け付けるため
+    _myProfileIdBytes = Uint8List.fromList(
+      Uuid.parse(_myProfileId!)
+    );
+  }
+
+
+
+
+
 
   Future<void> _initializeProfile() async {
     Profile? myProfile = await _profileService.loadMyProfile();
@@ -145,12 +177,75 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _mainLoopTimer?.cancel();
     FlutterBluePlus.stopScan();
+    _scanSub?.cancel();
     _stopBleAdvertising();
-    _scanSubscription?.cancel();
     _pageController.dispose();
     super.dispose();
   }
+
+  // ===============================
+  // メインループ: Scan→Advertiseを交互に繰り返す
+  // ===============================
+  void _startMainLoop() {
+    // まずScanから開始
+    _mainLoopTimer = Timer.periodic(Duration(seconds: scanDurationSec + advertiseDurationSec), (timer) async {
+      await _startBleScan();
+      await Future.delayed(Duration(seconds: scanDurationSec));
+      await FlutterBluePlus.stopScan();
+      await _scanSub?.cancel();
+      _isScanning = false;
+      await _startBleAdvertising();
+      await Future.delayed(Duration(seconds: advertiseDurationSec));
+      await _stopBleAdvertising();
+      _isAdvertising = false;
+    });
+    // 最初だけ即時Scan
+    _startBleScan();
+    Future.delayed(Duration(seconds: scanDurationSec), () async {
+      await FlutterBluePlus.stopScan();
+      await _scanSub?.cancel();
+      _isScanning = false;
+      await _startBleAdvertising();
+      await Future.delayed(Duration(seconds: advertiseDurationSec));
+      await _stopBleAdvertising();
+      _isAdvertising = false;
+    });
+  }
+
+  // ===============================
+  // BLE: Manufacturer DataでAdvertise（16byteバイナリUUID）
+  // ===============================
+  Future<void> _startBleAdvertising() async {
+    if (_isAdvertising) return;
+    _isAdvertising = true;
+    try {
+      // profileId(16byte) + appVersion(1byte) → 17byte
+      final data = Uint8List(17)
+        ..setRange(0, 16, _myProfileIdBytes)
+        ..[16] = appVersion;
+      final advertiseData = AdvertiseData(
+        manufacturerId: manufacturerId,
+        manufacturerData: data,
+        includePowerLevel: true,
+      );
+      await _blePeripheral.start(advertiseData: advertiseData);
+      debugPrint('📢 BLE広告開始 (profileId: $_myProfileId, version: $appVersion)');
+    } catch (e) {
+      debugPrint('❌ BLE広告エラー: $e');
+    }
+  }
+
+  Future<void> _stopBleAdvertising() async {
+    try {
+      await _blePeripheral.stop();
+    } catch (_) {}
+  }
+
+
+
+
 
   // --- BLE関連ロジック（省略なし） ---
   void _startRepeatingScan() => _startBleScan();
@@ -159,10 +254,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (_isScanning) return;
     _isScanning = true;
     try {
-      if (await FlutterBluePlus.isSupported == false) return;
       await FlutterBluePlus.startScan(
-        withServices: [Guid(customServiceUuid)],
-        timeout: const Duration(seconds: 4),
+        timeout: Duration(seconds: scanDurationSec),
       );
 
       String? detectedProfileId;
@@ -192,6 +285,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _startRepeatingScan();
       }
     } catch (e) {
+      debugPrint('❌ BLEスキャンエラー: $e');
       _isScanning = false;
       await Future.delayed(const Duration(seconds: 2));
       _startRepeatingScan();
