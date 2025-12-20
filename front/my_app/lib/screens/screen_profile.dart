@@ -12,11 +12,17 @@ import '../models/profile.dart';
 import '../models/encounter.dart';
 
 class ScreenProfile extends StatefulWidget {
-  const ScreenProfile({super.key});
+  final Map<String, dynamic> profileJson;
+
+  const ScreenProfile({
+    super.key,
+    required this.profileJson,
+  });
 
   @override
   State<ScreenProfile> createState() => _ScreenProfileState();
 }
+
 
 class _ScreenProfileState extends State<ScreenProfile> {
   // --- 各種コントローラー ---
@@ -37,14 +43,25 @@ class _ScreenProfileState extends State<ScreenProfile> {
 
   final ImagePicker _picker = ImagePicker();
 
+  
+
   @override
   void initState() {
     super.initState();
     // 紙吹雪の再生時間を2秒に設定
     _confettiController = ConfettiController(duration: const Duration(seconds: 2));
-    
-    _loadMyProfileData();
-    
+
+    // 初期値を受け取った profileJson からセット
+    final uid = widget.profileJson['uid'];
+    _nicknameController.text = widget.profileJson['nickname'] ?? '';
+    _birthdayController.text = widget.profileJson['birthday'] ?? '';
+    _birthplaceController.text = widget.profileJson['birthplace'] ?? '';
+    _triviaController.text = widget.profileJson['trivia'] ?? '';
+    _hehController.text = (widget.profileJson['hey'] ?? 0).toString();
+
+    // サーバー上の最新データで上書き
+    _loadProfileIfExists(uid);
+
     // へぇ数の入力に合わせてリアルタイムでカードの色を更新
     _hehController.addListener(() {
       if (mounted) {
@@ -66,20 +83,60 @@ class _ScreenProfileState extends State<ScreenProfile> {
     super.dispose();
   }
 
-  // --- データの読み込み ---
-  Future<void> _loadMyProfileData() async {
-    final myProfile = await _profileService.loadMyProfile();
-    if (myProfile != null) {
+
+
+Future<void> _loadProfileIfExists(String uid) async {
+  try {
+    final url = Uri.parse(
+      'https://saliently-multiciliated-jacqui.ngrok-free.dev/get_user_profile'
+    );
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
+      body: jsonEncode({
+        'id': uid,
+        'ver': 0,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+
+      // 👇 ここ超重要
+      final data = decoded['data'];
+
+      if (data == null) return;
+
       setState(() {
-        _nicknameController.text = myProfile.nickname;
-        _birthdayController.text = myProfile.birthday;
-        _birthplaceController.text = myProfile.birthplace;
-        _triviaController.text = myProfile.trivia;
-        _totalHehReceived = myProfile.totalHeh;
-        _hehController.text = _totalHehReceived.toString();
+        _nicknameController.text   = data['nickname'] ?? '';
+        _birthdayController.text   = data['birthday'] ?? '';
+        _birthplaceController.text = data['birthplace'] ?? '';
+        _triviaController.text    = data['trivia'] ?? '';
+    
+        _hehController.text = (data['hey'] ?? 0).toString();
+
       });
+
+      debugPrint('プロフィール読込成功: ${data['nickname']}');
+    } 
+    else if (response.statusCode == 404) {
+      debugPrint('プロフィール未登録（新規）');
     }
+  } catch (e) {
+    debugPrint('プロフィール取得エラー: $e');
   }
+}
+
+
+
+
+
+  // ... (既存の _selectDate, _selectPrefecture, _buildPickerToolbar, _buildWheel は変更なし) ...
+
 
   // --- ランクに応じたカードの背景デザイン（6段階） ---
   BoxDecoration _getCardDecoration(int heh, bool isPreview) {
@@ -364,9 +421,19 @@ class _ScreenProfileState extends State<ScreenProfile> {
 
   // --- 保存処理 ---
   Future<void> _saveProfile() async {
+     print('--- ScreenProfile _saveProfile ---');
+    print('profileId: ${widget.profileJson['uid']}');
+
     try {
-      final url = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/save_profile');
-      final response = await http.post(url,
+      final url = Uri.parse('https://saliently-multiciliated-jacqui.ngrok-free.dev/save_profile');
+
+      debugPrint(widget.profileJson['uid']);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存中...')));
+      
+      final response = await http.post(
+        url,
         headers: {'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true'},
         body: jsonEncode({
           'nickname': _nicknameController.text,
@@ -379,9 +446,11 @@ class _ScreenProfileState extends State<ScreenProfile> {
       if (response.statusCode == 200) {
         final profile = Profile(
           profileId: _profileService.generateProfileId(),
-          nickname: _nicknameController.text, birthday: _birthdayController.text,
-          birthplace: _birthplaceController.text, trivia: _triviaController.text,
-          totalHeh: int.tryParse(_hehController.text) ?? 0,
+          nickname: _nicknameController.text,
+          birthday: _birthdayController.text,
+          birthplace: _birthplaceController.text,
+          trivia: _triviaController.text,
+          
         );
         await _profileService.saveMyProfile(profile);
         if (!mounted) return;
