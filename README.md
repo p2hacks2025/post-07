@@ -65,16 +65,22 @@ Trinkle（トリンクル）
 ## 開発技術
 
 ### 利用したプログラミング言語
-- Flutter
+- Dart
 - Python
 
 ### 利用したフレームワーク・ライブラリ
-- Gemini API
-- Stable Diffusion API (予定)
+- FastAPI
+- Flutter
 
 ### その他開発に使用したツール・サービス
-- Github
-- ChatGPT
-- Gemini
+- Android studio
 - Blender
+- Canva
+- ChatGPT
+- Figma
+- Firebase
+- Gemini API
+- GitHub
+- GitHub Copilot
+- Google Gemini
 - Visual Studio Code
