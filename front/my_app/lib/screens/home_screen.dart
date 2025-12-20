@@ -22,8 +22,8 @@ import '../models/encounter.dart';
 
 const int manufacturerId = 0x1234; // 任意の2byte (0xFFFF以下)
 const int appVersion = 1; // 例: アプリのバージョン番号
-const int scanDurationSec = 5; // Scan時間（秒）
-const int advertiseDurationSec = 5; // Advertise時間（秒）
+const int scanDurationSec = 2; // Scan時間（秒）
+const int advertiseDurationSec = 2; // Advertise時間（秒）
 
 void main() {
   runApp(
