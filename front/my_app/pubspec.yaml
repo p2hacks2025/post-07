@@ -34,5 +34,5 @@ flutter:
     - lib/json/prefecher.json
     - lib/json/birthday.json
     - lib/json/birthday_trivia.json
-    - assets/images/title_bg.png
+    - assets/images/
     - assets/models/  # ★これを追加！フォルダごと指定するのが楽です
