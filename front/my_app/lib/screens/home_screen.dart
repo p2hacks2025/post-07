@@ -7,8 +7,6 @@ import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
-import 'package:uuid/uuid.dart';
-
 // 遷移先の各画面（プロジェクトに合わせてインポートパスを確認してください）
 import 'screen_profile.dart';
 import 'screen_map.dart';
@@ -127,6 +125,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     // フッターのアイコン間隔を調整するPageController
     // ★ JSON から uid を取得
     _myProfileId = widget.profileJson["uid"] as String?;
+
+    debugPrint( widget.profileJson["uid"]);
 
     _pageController = PageController(
       initialPage: _selectedIndex,

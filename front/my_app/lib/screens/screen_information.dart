@@ -171,29 +171,48 @@ class _ScreenInformationState extends State<ScreenInformation> {
       var request = http.MultipartRequest('POST', uri);
 
       // テキストデータのセット
-      request.fields['nickname'] = _nicknameController.text;
-      request.fields['birthday'] = _birthdayController.text;
-      request.fields['birthplace'] = _birthplaceController.text;
-      request.fields['trivia'] = _triviaController.text;
-      request.fields['hee_count'] = _heeController.text;
-      request.fields['uid'] = widget.profileJson['uid'];
+      // request.fields['nickname'] = _nicknameController.text;
+      // request.fields['birthday'] = _birthdayController.text;
+      // request.fields['birthplace'] = _birthplaceController.text;
+      // request.fields['trivia'] = _triviaController.text;
+      // request.fields['hey'] = int.tryParse_heeController.text;
+      // request.fields['hey'] = int.Try_heeController.text;
+      // request.fields['id'] = widget.profileJson['uid'].toString();
+      // request.fields['ver'] = "1";
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
+        body: jsonEncode({
+          'nickname': _nicknameController.text,
+          'birthday': _birthdayController.text,
+          'birthplace': _birthplaceController.text,
+          'trivia': _triviaController.text,
+          'hey': int.tryParse(_heeController.text) ?? 0,
+          'id': widget.profileJson['uid'],
+          'ver':0
+        }),
+      );
+
 
 
       // 画像ファイルのセット (プロフィール画像のみ)
-      if (_profileImage != null) {
-        request.files.add(await http.MultipartFile.fromPath(
-          'profile_image',
-          _profileImage!.path,
-        ));
-      }
+      // if (_profileImage != null) {
+      //   request.files.add(await http.MultipartFile.fromPath(
+      //     'profile_image',
+      //     _profileImage!.path,
+      //   ));
+      // }
 
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
+     
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         // Discord共有コードのレスポンス構造 data['data']['card_image_url'] に合わせる
-        final imageUrl = data['data']['card_image_url'];
+        final imageUrl = data['image_url'];
 
         setState(() {
           _resultImageUrl = imageUrl;
@@ -227,6 +246,8 @@ class _ScreenInformationState extends State<ScreenInformation> {
       setState(() => _isLoading = false);
     }
   }
+
+  
 
   @override
   Widget build(BuildContext context) {
