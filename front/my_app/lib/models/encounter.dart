@@ -5,10 +5,12 @@ import 'profile.dart';
 class Encounter {
   final Profile profile; // すれ違った相手のプロフィール
   final DateTime encounterTime; // すれ違った日時
+  final String version; // アプリやプロフィールのバージョン
 
   Encounter({
     required this.profile,
     required this.encounterTime,
+    required this.version,
   });
 
   /// JSONからEncounterオブジェクトを作成
@@ -16,6 +18,7 @@ class Encounter {
     return Encounter(
       profile: Profile.fromJson(json['profile']),
       encounterTime: DateTime.parse(json['encounterTime']),
+      version: json['version'] ?? '',
     );
   }
 
@@ -24,6 +27,7 @@ class Encounter {
     return {
       'profile': profile.toJson(),
       'encounterTime': encounterTime.toIso8601String(),
+      'version': version,
     };
   }
 

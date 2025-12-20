@@ -310,7 +310,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         birthplace: '',
         trivia: '');
     await _profileService.saveEncounter(
-        Encounter(profile: profile, encounterTime: DateTime.now()));
+      Encounter(profile: profile, encounterTime: DateTime.now(), version: '1.0.0'));
   }
 
   Future<void> stopScan() async {
