@@ -183,14 +183,19 @@ class _ScreenProfileState extends State<ScreenProfile> {
 
   Future<void> _saveProfile() async {
     try {
-      final url = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/save_profile');
+      final url = Uri.parse('https://saliently-multiciliated-jacqui.ngrok-free.dev/save_profile');
       final data = {
         'nickname': _nicknameController.text,
         'birthday': _birthdayController.text,
         'birthplace': _birthplaceController.text,
         'trivia': _triviaController.text,
-        'profileId': widget.profileId
+        'id': 'qwert',
+        // 'user_id':widget.profileId , 現時点だとnullになる
+        'ver':0,
+        'hey':0
       };
+
+      print(widget.profileId);
       
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存中...')));
@@ -210,6 +215,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
           birthday: _birthdayController.text,
           hometown: _birthplaceController.text,
           trivia: _triviaController.text,
+          
         );
         await _profileService.saveMyProfile(profile);
         

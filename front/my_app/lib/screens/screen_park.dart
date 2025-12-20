@@ -105,14 +105,12 @@ class _ScreenElevenState extends State<ScreenEleven>
     try {
       // 注意: このエンドポイントは nickname, birthday, birthplace, trivia が必要です
       // 現在は仮のデータを送信しています
-      final url = Uri.parse('http://localhost:5000/save_profile');
+      final url = Uri.parse('https://saliently-multiciliated-jacqui.ngrok-free.dev/heyplus');
       
       final data = {
-        'nickname': 'テストユーザー',
-        'birthday': '2000-01-01',
-        'birthplace': '東京',
-        'trivia': 'カード${index + 1}のトリビア: へぇ数${_heeCounts[index]}',
-        'hey_count': _heeCounts[index], // 追加情報として送信
+        'id': 'abcde',
+        'ver':0,
+        'pushedhey': _heeCounts[index], // 追加情報として送信
       };
       
       debugPrint('データを送信中: ${jsonEncode(data)}');
