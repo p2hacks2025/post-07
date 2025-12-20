@@ -313,37 +313,57 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // ...既存の_startBleAdvertising, _stopBleAdvertisingの重複定義を削除...
 
-  Future<void> _handleEncounter(String id) async {
-    Profile? profile = await _fetchProfileFromServer(id);
-    profile ??= Profile(
-        profileId: id,
-        nickname: 'すれ違った人',
-        birthday: '',
-        birthplace: '',
-        trivia: '');
+  Future<void> _handleEncounter(String id, {int? version}) async {
+    Profile? fetched = await _fetchProfileFromServer(id, version: version);
+    final profile = fetched ?? Profile(
+      profileId: id,
+      nickname: 'すれ違った人',
+      birthday: '',
+      birthplace: '',
+      trivia: '',
+    );
+    setState(() {
+      _profiles.add({
+        'nickname': profile.nickname,
+        'birthday': profile.birthday,
+        'birthplace': profile.birthplace,
+        'trivia': profile.trivia,
+        'color': Colors.grey.shade200, // デフォルト色
+        'icon': Icons.face, // デフォルトアイコン
+      });
+    });
     await _profileService.saveEncounter(
-      Encounter(profile: profile, encounterTime: DateTime.now(), version: '1.0.0'));
+      Encounter(profile: profile, encounterTime: DateTime.now(), version: (version?.toString() ?? '1.0.0')));
   }
 
   Future<void> stopScan() async {
     await FlutterBluePlus.stopScan();
   }
 
-  Future<Profile?> _fetchProfileFromServer(String id) async {
+  Future<Profile?> _fetchProfileFromServer(String id, {int? version}) async {
     try {
-      final url = Uri.parse(
-          'https://saliently-multiciliated-jacqui.ngrok-free.dev/get_profile');
-      final res = await http.get(url, headers: {
-        'ngrok-skip-browser-warning': 'true'
-      }).timeout(const Duration(seconds: 5));
+      final url = Uri.parse('https://saliently-multiciliated-jacqui.ngrok-free.dev/get_profile');
+      final res = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: jsonEncode({
+          'id': id,
+          'ver': version ?? 1,
+        }),
+      ).timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
+        final data = d['data'] ?? {};
         return Profile(
-            profileId: id,
-            nickname: d['nickname'] ?? '',
-            birthday: d['birthday'] ?? '',
-            birthplace: d['birthplace'] ?? '',
-            trivia: d['trivia'] ?? '');
+          profileId: data['id'] ?? id,
+          nickname: data['nickname'] ?? '',
+          birthday: data['birthday'] ?? '',
+          birthplace: data['birthplace'] ?? '',
+          trivia: data['trivia'] ?? '',
+        );
       }
     } catch (e) {
       return null;
