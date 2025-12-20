@@ -297,7 +297,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             return;
           }
           // 5分以上経過していれば保存・遷移
-          await _handleEncounter(detectedProfileId);
+          // ★ versionを_handleEncounterに渡す
+          await _handleEncounter(detectedProfileId, version: version);
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const ScreenEncounter()),
@@ -342,33 +343,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<Profile?> _fetchProfileFromServer(String id, {int? version}) async {
     try {
-      final url = Uri.parse('https://saliently-multiciliated-jacqui.ngrok-free.dev/get_profile');
       final res = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
+        Uri.parse('https://saliently-multiciliated-jacqui.ngrok-free.dev/get_profile'),
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'id': id,
           'ver': version ?? 1,
         }),
-      ).timeout(const Duration(seconds: 5));
-      if (res.statusCode == 200) {
-        final d = jsonDecode(res.body);
-        final data = d['data'] ?? {};
-        return Profile(
-          profileId: data['id'] ?? id,
-          nickname: data['nickname'] ?? '',
-          birthday: data['birthday'] ?? '',
-          birthplace: data['birthplace'] ?? '',
-          trivia: data['trivia'] ?? '',
-        );
+      ).timeout(const Duration(seconds: 10));
+
+      debugPrint('📡 status=${res.statusCode}');
+      debugPrint('📡 body=${res.body}');
+
+      if (res.statusCode != 200) return null;
+
+      final d = jsonDecode(res.body);
+      final data = d['data'];
+
+      if (data is! Map<String, dynamic>) {
+        debugPrint('⚠️ invalid data: $data');
+        return null;
       }
+
+      return Profile(
+        profileId: data['id'] ?? id,
+        nickname: data['nickname'] ?? '',
+        birthday: data['birthday'] ?? '',
+        birthplace: data['birthplace'] ?? '',
+        trivia: data['trivia'] ?? '',
+      );
     } catch (e) {
+      debugPrint('❌ fetch exception: $e');
       return null;
     }
-    return null;
   }
 
   // --- メニュー設定 ---
