@@ -1,15 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math'; // 追加: min関数などで使用
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:confetti/confetti.dart'; // 紙吹雪パッケージ
+import 'package:confetti/confetti.dart';
 
-// 必要なウィジェット（screen_profile.dartと同じものを使用）
+// ★追加: Firebase Storageを使用するためのインポート
+import 'package:firebase_storage/firebase_storage.dart'; 
+
 import '../widgets/shining_card.dart';
 import '../widgets/interactive_card.dart';
-
 import 'home_screen.dart';
 
 class ScreenInformation extends StatefulWidget {
@@ -29,26 +30,23 @@ class _ScreenInformationState extends State<ScreenInformation> {
   final _birthplaceController = TextEditingController();
   final _hehController = TextEditingController(text: '0');
 
-  // 紙吹雪用
   late ConfettiController _confettiController;
 
-  File? _profileImage;      // プロフィール写真（ローカル）
-  File? _triviaAiImage;     // AI画像（ローカル手動選択）
-  String? _triviaAiImageUrl; // AI画像（サーバーURL）
+  File? _profileImage;
+  File? _triviaAiImage;
+  String? _triviaAiImageUrl; // ここに表示可能なhttps形式のURLが入ります
 
   bool _isLoading = false;
   final ImagePicker _picker = ImagePicker();
-  int _totalHehReceived = 0; // プレビュー用
+  int _totalHehReceived = 0;
 
   @override
   void initState() {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 2));
 
-    // プロフィールJSONがあれば反映（AI画像URLなど）
     if (widget.profileJson != null && widget.profileJson!.isNotEmpty) {
        final uid = widget.profileJson!['uid'];
-       // 既存の値があればセット
        _nicknameController.text = widget.profileJson!['nickname'] ?? '';
        _birthdayController.text = widget.profileJson!['birthday'] ?? '';
        _birthplaceController.text = widget.profileJson!['birthplace'] ?? '';
@@ -59,7 +57,6 @@ class _ScreenInformationState extends State<ScreenInformation> {
        }
     }
     
-    // へぇ数のリスナー（登録画面では通常0スタートですが、念のため）
     _hehController.addListener(() {
       if (mounted) {
         setState(() {
@@ -81,7 +78,7 @@ class _ScreenInformationState extends State<ScreenInformation> {
   }
 
   // -------------------------------
-  // サーバーからAI画像URL等を取得
+  // ★重要修正: サーバーからAI画像URL等を取得し、Storage形式なら変換する
   // -------------------------------
   Future<void> _loadProfileIfExists(String uid) async {
     try {
@@ -105,31 +102,38 @@ class _ScreenInformationState extends State<ScreenInformation> {
         final data = decoded['data'];
         if (data == null) return;
 
-        setState(() {
-          if (data['ai_image_url'] != null) {
-            _triviaAiImageUrl = data['ai_image_url'];
+        String? rawImageUrl = data['ai_image_url'];
+        String? displayableUrl;
+
+        // ★★★ URLの加工処理 ★★★
+        if (rawImageUrl != null && rawImageUrl.isNotEmpty) {
+          if (rawImageUrl.startsWith('gs://')) {
+            // 'gs://' から始まる場合は Firebase Storage の参照とみなして変換
+            try {
+              final ref = FirebaseStorage.instance.refFromURL(rawImageUrl);
+              displayableUrl = await ref.getDownloadURL();
+              debugPrint('gs:// URLを変換しました: $displayableUrl');
+            } catch (e) {
+              debugPrint('Storage URL変換エラー: $e');
+              // 変換に失敗しても、とりあえず元のURLを入れておく（またはnullにする）
+              displayableUrl = rawImageUrl;
+            }
+          } else {
+            // 既に http から始まる場合はそのまま使用
+            displayableUrl = rawImageUrl;
           }
-          // 既存データがあれば上書き（必要に応じて）
-          // _nicknameController.text = data['nickname'] ?? _nicknameController.text;
-        });
-        debugPrint('AI画像URL取得: $_triviaAiImageUrl');
+        }
+
+        if (mounted) {
+          setState(() {
+            _triviaAiImageUrl = displayableUrl;
+          });
+        }
+        debugPrint('最終的なAI画像URL: $_triviaAiImageUrl');
       }
     } catch (e) {
       debugPrint('プロフィール取得エラー: $e');
     }
-  }
-
-  // -------------------------------
-  // デバッグ用 AI画像シミュレーション
-  // -------------------------------
-  void _debugSimulateAiImageFetch() {
-    setState(() {
-      _triviaAiImageUrl = 'https://picsum.photos/seed/trivia/200/200';
-      _triviaAiImage = null; 
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('デバッグ: AI画像URLを取得しました')),
-    );
   }
 
   // -------------------------------
@@ -146,6 +150,8 @@ class _ScreenInformationState extends State<ScreenInformation> {
             _profileImage = File(pickedFile.path);
           } else {
             _triviaAiImage = File(pickedFile.path);
+            // 手動で選んだ場合はURLをクリアしてローカル画像を優先表示
+            _triviaAiImageUrl = null; 
           }
         });
       }
@@ -172,7 +178,6 @@ class _ScreenInformationState extends State<ScreenInformation> {
       );
       final request = http.MultipartRequest('POST', uri);
 
-      // --- 文字データ ---
       request.fields['nickname'] = _nicknameController.text;
       request.fields['birthday'] = _birthdayController.text;
       request.fields['birthplace'] = _birthplaceController.text;
@@ -182,17 +187,18 @@ class _ScreenInformationState extends State<ScreenInformation> {
       request.fields['hey'] = _hehController.text;
       request.fields['date'] = DateTime.now().toIso8601String();
 
-      // --- 画像 (プロフィール写真) ---
+      // プロフィール写真
       if (_profileImage != null) {
         request.files.add(
           await http.MultipartFile.fromPath(
-            'image', // API側のキー
+            'image', 
             _profileImage!.path,
           ),
         );
       }
       
-      // 必要であればAI画像ファイルも送信する処理をここに追加
+      // 注意: AI画像をここで再送信するかはサーバー側の仕様によります。
+      // もしAI画像も毎回アップロードし直す必要があるならここに処理を追加します。
 
       final response = await request.send();
       final result = await http.Response.fromStream(response);
@@ -230,9 +236,7 @@ class _ScreenInformationState extends State<ScreenInformation> {
     }
   }
 
-  // -------------------------------
-  // UI構築用メソッド群（screen_profile.dartから移植）
-  // -------------------------------
+  // --- UI構築用メソッド（変更なし） ---
   
   BoxDecoration _getCardDecoration(int heh, bool isPreview) {
     List<Color> colors = [Colors.white, Colors.white];
@@ -541,13 +545,7 @@ class _ScreenInformationState extends State<ScreenInformation> {
         appBar: AppBar(
           title: const Text('プロフィール作成', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           backgroundColor: Colors.green.shade600, foregroundColor: Colors.white, toolbarHeight: 50,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.bug_report),
-              tooltip: 'デバッグ: AI画像取得',
-              onPressed: _debugSimulateAiImageFetch,
-            ),
-          ],
+          // デバッグ用ボタンは不要なら削除してください
         ),
         body: SingleChildScrollView(
           child: Padding(

@@ -4,6 +4,8 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   file_selector_windows
+  firebase_core
+  firebase_storage
   flutter_ble_peripheral
   flutter_inappwebview_windows
   url_launcher_windows
