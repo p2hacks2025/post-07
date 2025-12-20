@@ -7,11 +7,17 @@ import 'package:http/http.dart' as http;
 import 'home_screen.dart';
 
 class ScreenInformation extends StatefulWidget {
-  const ScreenInformation({super.key});
+  final Map<String, dynamic> profileJson;
+
+  const ScreenInformation({
+    super.key,
+    required this.profileJson,
+  });
 
   @override
   State<ScreenInformation> createState() => _ScreenInformationState();
 }
+
 
 class _ScreenInformationState extends State<ScreenInformation> {
   final _nicknameController = TextEditingController();
@@ -32,6 +38,9 @@ class _ScreenInformationState extends State<ScreenInformation> {
   void initState() {
     super.initState();
     _heeController.text = "0";
+
+  debugPrint("ScreenInformation 받은 profileJson: ${widget.profileJson}");
+  debugPrint("UID in ScreenInformation: ${widget.profileJson['uid']}");
   }
 
   @override
@@ -166,6 +175,8 @@ class _ScreenInformationState extends State<ScreenInformation> {
       request.fields['birthplace'] = _birthplaceController.text;
       request.fields['trivia'] = _triviaController.text;
       request.fields['hee_count'] = _heeController.text;
+      request.fields['uid'] = widget.profileJson['uid'];
+
 
       // 画像ファイルのセット (プロフィール画像のみ)
       if (_profileImage != null) {
@@ -195,9 +206,13 @@ class _ScreenInformationState extends State<ScreenInformation> {
         // 少し待ってからホーム画面へ
         await Future.delayed(const Duration(seconds: 2));
         if (!mounted) return;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+       Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => HomeScreen(
+            profileJson: widget.profileJson,
+          ),
+        ),
+      );
       } else {
         throw Exception('サーバーエラー: ${response.statusCode}');
       }
