@@ -92,3 +92,4 @@ Trinkle（トリンクル）
 - ngrok
 - Stable Diffusion
 - Visual Studio Code
+- Bluetooth Low Energy
