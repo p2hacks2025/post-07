@@ -5,7 +5,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 // ▼ 実際のファイル構成に合わせてimportを確認してください
+<<<<<<< HEAD
+=======
 
+>>>>>>> 3233e9f033a54eb33c325c25ae3dac47152fd372
 import 'screens/screen_birthday.dart'; 
 import 'screens/screen_start.dart';
 
