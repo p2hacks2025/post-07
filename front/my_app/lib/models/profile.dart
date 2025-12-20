@@ -1,50 +1,43 @@
 import 'dart:convert';
 
-/// プロフィール情報を管理するデータモデル
 class Profile {
-  final String profileId; // 一意なID
+  final String profileId;
   final String nickname;
-  final String birthday; // 誕生日（例: "2000-01-01"）
-  final String hometown; // 出身地
-  final String trivia; // トリビア・自己紹介
+  final String birthday;
+  final String birthplace;
+  final String trivia;
+  final int totalHeh; // ★ここが重要：合計へぇ数
 
   Profile({
     required this.profileId,
     required this.nickname,
     required this.birthday,
-    required this.hometown,
+    required this.birthplace,
     required this.trivia,
+    this.totalHeh = 0, // デフォルトは0
   });
 
-  /// JSONからProfileオブジェクトを作成
-  factory Profile.fromJson(Map<String, dynamic> json) {
-    return Profile(
-      profileId: json['profileId'] ?? '',
-      nickname: json['nickname'] ?? '',
-      birthday: json['birthday'] ?? '',
-      hometown: json['hometown'] ?? '',
-      trivia: json['trivia'] ?? '',
-    );
-  }
+  // JSON文字列からProfileオブジェクトを作る
+  factory Profile.fromJsonString(String str) => Profile.fromJson(json.decode(str));
 
-  /// ProfileオブジェクトをJSONに変換
-  Map<String, dynamic> toJson() {
-    return {
-      'profileId': profileId,
-      'nickname': nickname,
-      'birthday': birthday,
-      'hometown': hometown,
-      'trivia': trivia,
-    };
-  }
+  // ProfileオブジェクトをJSON文字列にする
+  String toJsonString() => json.encode(toJson());
 
-  /// ProfileオブジェクトをJSON文字列に変換
-  String toJsonString() {
-    return jsonEncode(toJson());
-  }
+  factory Profile.fromJson(Map<String, dynamic> json) => Profile(
+    profileId: json["profileId"] ?? "",
+    nickname: json["nickname"] ?? "",
+    birthday: json["birthday"] ?? "",
+    birthplace: json["birthplace"] ?? "",
+    trivia: json["trivia"] ?? "",
+    totalHeh: json["total_heh"] ?? 0, // サーバー側のキー名（total_heh）に合わせる
+  );
 
-  /// JSON文字列からProfileオブジェクトを作成
-  factory Profile.fromJsonString(String jsonString) {
-    return Profile.fromJson(jsonDecode(jsonString));
-  }
+  Map<String, dynamic> toJson() => {
+    "profileId": profileId,
+    "nickname": nickname,
+    "birthday": birthday,
+    "birthplace": birthplace,
+    "trivia": trivia,
+    "total_heh": totalHeh,
+  };
 }

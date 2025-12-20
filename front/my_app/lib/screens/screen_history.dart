@@ -157,11 +157,11 @@ class _ScreenHistoryState extends State<ScreenHistory> {
                                 color: Colors.grey.shade600,
                               ),
                             ),
-                            if (encounter.profile.hometown.isNotEmpty)
+                            if (encounter.profile.birthplace.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  '出身地: ${encounter.profile.hometown}',
+                                  '出身地: ${encounter.profile.birthplace}',
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: Colors.grey.shade700,
@@ -200,8 +200,8 @@ class _ScreenHistoryState extends State<ScreenHistory> {
               _buildDetailRow('すれ違った日時', _formatDateTime(encounter.encounterTime)),
               if (encounter.profile.birthday.isNotEmpty)
                 _buildDetailRow('誕生日', encounter.profile.birthday),
-              if (encounter.profile.hometown.isNotEmpty)
-                _buildDetailRow('出身地', encounter.profile.hometown),
+              if (encounter.profile.birthplace.isNotEmpty)
+                _buildDetailRow('出身地', encounter.profile.birthplace),
               if (encounter.profile.trivia.isNotEmpty)
                 _buildDetailRow('トリビア', encounter.profile.trivia),
             ],
