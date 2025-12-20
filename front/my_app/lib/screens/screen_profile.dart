@@ -9,7 +9,6 @@ import 'dart:convert';
 import 'dart:math'; 
 import '../services/profile_service.dart';
 import '../models/profile.dart';
-import '../models/encounter.dart';
 
 class ScreenProfile extends StatefulWidget {
   final Map<String, dynamic> profileJson;
@@ -50,9 +49,19 @@ class _ScreenProfileState extends State<ScreenProfile> {
     super.initState();
     // 紙吹雪の再生時間を2秒に設定
     _confettiController = ConfettiController(duration: const Duration(seconds: 2));
-    
-    _loadMyProfileData();
-    
+
+    // プロフィールJSONが渡されていれば先に反映してからサーバー読み込み
+    if (widget.profileJson.isNotEmpty && widget.profileJson['uid'] != null) {
+      final uid = widget.profileJson['uid'] as String;
+      _nicknameController.text = widget.profileJson['nickname'] ?? '';
+      _birthdayController.text = widget.profileJson['birthday'] ?? '';
+      _birthplaceController.text = widget.profileJson['birthplace'] ?? '';
+      _triviaController.text = widget.profileJson['trivia'] ?? '';
+      _hehController.text = (widget.profileJson['hey'] ?? 0).toString();
+      _loadProfileIfExists(uid);
+      debugPrint('Loaded profileJson for uid: $uid');
+    }
+
     // へぇ数の入力に合わせてリアルタイムでカードの色を更新
     _hehController.addListener(() {
       if (mounted) {
@@ -74,28 +83,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
     super.dispose();
   }
 
-  @override
-void initState() {
-  super.initState();
 
-  final uid = widget.profileJson['uid'];
-  _loadProfileIfExists(uid);
-
-  // 🔍 JSONの中身を確認
-  print('受け取った profileJson: ${widget.profileJson}');
-
-  // uid を読む
- 
-  print('uid: $uid');
-
-  // もし将来データが増えたらここで展開できる
-  _nicknameController.text = widget.profileJson['nickname'] ?? '';
-  _birthdayController.text = widget.profileJson['birthday'] ?? '';
-  _birthplaceController.text = widget.profileJson['birthplace'] ?? '';
-  _triviaController.text = widget.profileJson['trivia'] ?? '';
-  _heeController.text = (widget.profileJson['hey'] ?? 0).toString();
-
-}
 
 Future<void> _loadProfileIfExists(String uid) async {
   try {
@@ -129,7 +117,7 @@ Future<void> _loadProfileIfExists(String uid) async {
         _birthplaceController.text = data['birthplace'] ?? '';
         _triviaController.text    = data['trivia'] ?? '';
     
-        _heeController.text       = data['hey'] ?? 0;
+        _hehController.text       = data['hey'] ?? 0;
 
       });
 
@@ -372,18 +360,7 @@ Future<void> _loadProfileIfExists(String uid) async {
     );
   }
 
-  // --- 写真関連 ---
-  Future<void> _pickImage(bool isProfile) async {
-    try {
-      final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-      if (pickedFile != null) {
-        setState(() {
-          if (isProfile) _profileImage = File(pickedFile.path);
-          else _triviaAiImage = File(pickedFile.path);
-        });
-      }
-    } catch (e) { debugPrint('画像選択エラー: $e'); }
-  }
+
 
   Widget _buildPhotoBox({required String label, required IconData icon, required File? file, required VoidCallback? onTap}) {
     return GestureDetector(
@@ -485,9 +462,8 @@ Future<void> _loadProfileIfExists(String uid) async {
           profileId: _profileService.generateProfileId(),
           nickname: _nicknameController.text,
           birthday: _birthdayController.text,
-          hometown: _birthplaceController.text,
+          birthplace: _birthplaceController.text,
           trivia: _triviaController.text,
-          
         );
         await _profileService.saveMyProfile(profile);
         if (!mounted) return;

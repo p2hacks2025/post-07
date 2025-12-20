@@ -5,8 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 // ▼ 実際のファイル構成に合わせてimportを確認してください
-import 'screens/home_screen.dart'; 
-import 'screens/screen_information.dart'; 
 import 'screens/screen_birthday.dart'; 
 import 'screens/screen_start.dart';
 
