@@ -285,6 +285,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
           if (!mounted) return;
 
+          // 直近5分以内の同一IDがあればスキップ
+          final history = await _profileService.loadEncounterHistory();
+          final now = DateTime.now();
+          final recent = history.where((e) =>
+            e.profile.profileId == detectedProfileId &&
+            now.difference(e.encounterTime).inMinutes < 5
+          );
+          if (recent.isNotEmpty) {
+            // 5分以内なら何もしない
+            return;
+          }
+          // 5分以上経過していれば保存・遷移
           await _handleEncounter(detectedProfileId);
           Navigator.push(
             context,
@@ -310,7 +322,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         birthplace: '',
         trivia: '');
     await _profileService.saveEncounter(
-        Encounter(profile: profile, encounterTime: DateTime.now()));
+      Encounter(profile: profile, encounterTime: DateTime.now(), version: '1.0.0'));
   }
 
   Future<void> stopScan() async {

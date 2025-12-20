@@ -20,7 +20,7 @@ class ScreenInformation extends StatefulWidget {
 
 
 class _ScreenInformationState extends State<ScreenInformation> {
-    String? _resultImageUrl;
+    // String? _resultImageUrl; // ←重複のため削除
   final _nicknameController = TextEditingController();
   final _triviaController = TextEditingController();
   final _birthdayController = TextEditingController();
@@ -403,9 +403,6 @@ class _ScreenInformationState extends State<ScreenInformation> {
                   Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
                 ],
               ),
-            ],
-          ),
-        ),
       ),
     );
   }
