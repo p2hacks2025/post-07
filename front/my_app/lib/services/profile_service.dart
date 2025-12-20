@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http; // 追加
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../models/profile.dart';
@@ -15,10 +15,9 @@ class ProfileService {
   // サーバーのベースURL
   final String _baseUrl = 'https://cylinderlike-dana-cryoscopic.ngrok-free.dev';
 
-  // --- 追加: サーバーから最新のプロフィール（へぇ数含む）を取得 ---
+  // --- サーバーから最新のプロフィール（へぇ数含む）を取得 ---
   Future<Profile?> fetchMyProfileFromServer() async {
     try {
-      // サーバーのエンドポイント（例: /get_profile）
       final url = Uri.parse('$_baseUrl/get_profile');
 
       final response = await http.get(
@@ -30,8 +29,6 @@ class ProfileService {
       );
 
       if (response.statusCode == 200) {
-        // サーバーから返ってきたJSONをProfileオブジェクトに変換
-        // Profile.fromJsonString または Profile.fromJson が定義されている必要があります
         return Profile.fromJsonString(response.body);
       } else {
         print('サーバーエラー: ${response.statusCode}');
@@ -57,33 +54,6 @@ class ProfileService {
     if (jsonString == null || jsonString.isEmpty) {
       return null;
     }
-
-    // クラス内の適切な場所（loadMyProfileの下など）に追加
-Future<Profile?> fetchMyProfileFromServer() async {
-  try {
-    // あなたのngrok URL
-    final url = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/get_profile');
-
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      // ステップ1で作ったfromJsonStringを使って変換
-      return Profile.fromJsonString(response.body);
-    } else {
-      print('サーバーエラー: ${response.statusCode}');
-      return null;
-    }
-  } catch (e) {
-    print('接続エラー: $e');
-    return null;
-  }
-}
     
     try {
       return Profile.fromJsonString(jsonString);
@@ -98,16 +68,18 @@ Future<Profile?> fetchMyProfileFromServer() async {
     return const Uuid().v4();
   }
 
-  // === 以下、すれ違い履歴・展示カード機能はそのまま保持 ===
+  // === すれ違い履歴 ===
 
   Future<void> saveEncounter(Encounter encounter) async {
     final prefs = await SharedPreferences.getInstance();
     List<Encounter> history = await loadEncounterHistory();
     history.add(encounter);
+    // 保存するときはJsonStringに変換
     List<String> jsonList = history.map((e) => e.toJsonString()).toList();
     await prefs.setStringList(_keyEncounterHistory, jsonList);
   }
 
+  /// 履歴を読み込む（内部用）
   Future<List<Encounter>> loadEncounterHistory() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonList = prefs.getStringList(_keyEncounterHistory);
@@ -120,6 +92,12 @@ Future<Profile?> fetchMyProfileFromServer() async {
     }
   }
 
+  /// ★追加: ScreenAchieveから呼ばれるメソッド
+  /// 実態は loadEncounterHistory を呼んでいるだけです
+  Future<List<Encounter>> getHistory() async {
+    return loadEncounterHistory();
+  }
+
   Future<void> clearEncounterHistory() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyEncounterHistory);
@@ -129,6 +107,8 @@ Future<Profile?> fetchMyProfileFromServer() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyMyProfile);
   }
+
+  // === 展示カード機能 ===
 
   Future<void> saveDisplayedCard(TriviaCard card) async {
     final prefs = await SharedPreferences.getInstance();

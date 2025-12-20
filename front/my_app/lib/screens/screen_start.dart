@@ -31,7 +31,7 @@ class _ScreenStartState extends State<ScreenStart> {
       );
 
     // 3. 次の画面へ遷移
-   /* if (widget.isRegistered) {
+    if (widget.isRegistered) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -41,7 +41,7 @@ class _ScreenStartState extends State<ScreenStart> {
         context,
         MaterialPageRoute(builder: (context) => const ScreenInformation()),
       );
-    }*/
+    }
   }
 
 

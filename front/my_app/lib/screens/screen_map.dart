@@ -296,12 +296,12 @@ class _ScreenMapState extends State<ScreenMap> {
         ),
       ),
       
-      floatingActionButton: FloatingActionButton.extended(
+     /* floatingActionButton: FloatingActionButton.extended(
         onPressed: _simulateStreetPass,
         label: const Text('すれ違いテスト'),
         icon: const Icon(Icons.person_add),
         backgroundColor: Colors.orange,
-      ),
+      ),*/  //デバック用
     );
   }
 }
