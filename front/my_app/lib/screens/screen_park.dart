@@ -97,19 +97,13 @@ class _ScreenElevenState extends State<ScreenEleven>
       _isProcessing = true;
     });
 
-    // TODO: 正しいAPIのURLに変更してください
-    // 例: 'http://localhost:5000/save_profile'
-    //     'https://your-domain.ngrok-free.app/save_profile'
-    
     // へぇ数をバックエンドに送信
     try {
-      // 注意: このエンドポイントは nickname, birthday, birthplace, trivia が必要です
-      // 現在は仮のデータを送信しています
       final url = Uri.parse('https://saliently-multiciliated-jacqui.ngrok-free.dev/heyplus');
       
       final data = {
-        'id': 'abcde',
-        'ver':0,
+        'id': 'abcde', //仮置き
+        'ver':0,//仮置き
         'pushedhey': _heeCounts[index], // 追加情報として送信
       };
       

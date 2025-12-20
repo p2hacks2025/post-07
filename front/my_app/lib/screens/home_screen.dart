@@ -18,11 +18,25 @@ import '../models/encounter.dart';
 import '../models/trivia_card.dart';
 
 void main() {
-  runApp(const MaterialApp(home: HomeScreen()));
+  runApp(
+    MaterialApp(
+      home: HomeScreen(
+        profileJson: {
+          "uid": "debug-uid-001",
+        },
+      ),
+    ),
+  );
 }
 
+
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final Map<String, dynamic> profileJson;
+
+  const HomeScreen({
+    super.key,
+    required this.profileJson,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -95,6 +109,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+     // ★ JSON から uid を取得
+    _myProfileId = widget.profileJson["uid"] as String?;
+
     _pageController = PageController(
       initialPage: _selectedIndex,
       viewportFraction: 0.1,
@@ -197,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<Profile?> _fetchProfileFromServer(String id) async {
     try {
-      final url = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/get_profile');
+      final url = Uri.parse('https://saliently-multiciliated-jacqui.ngrok-free.dev/get_profile');
       final res = await http.get(url, headers: {'ngrok-skip-browser-warning': 'true'}).timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
@@ -222,7 +239,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (index == _selectedIndex) {
       Widget? target;
       switch (index) {
-        case 1: target = const ScreenProfile(); break;
+        case 1: target = ScreenProfile(profileJson:
+                      widget.profileJson); break;
         case 2: target = const ScreenMap(); break;
         case 3: target = const ScreenBirthday(); break;
         case 4: target = const ScreenEleven(); break;
