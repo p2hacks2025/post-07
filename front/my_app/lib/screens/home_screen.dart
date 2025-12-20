@@ -6,6 +6,8 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:uuid/uuid.dart';
+
 // 遷移先の各画面（プロジェクトに合わせてインポートパスを確認してください）
 import 'screen_profile.dart';
 import 'screen_map.dart';
@@ -167,10 +169,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _myProfileId = myProfile.profileId;
     }
 
+    // profileIdバイト列を必ず初期化
+    _initProfileIdBytes();
+
     // ★★★ エミュレーター対策：ここをコメントアウトしました ★★★
     // エミュレーターはBluetoothを使えないため、ここでエラーになります。
     // 実機でテストするときは、ここのコメントアウト（//）を外してください。
-    
     // await _startBleAdvertising(); 
     // _startRepeatingScan();
   }
@@ -253,60 +257,53 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _startBleScan() async {
     if (_isScanning) return;
     _isScanning = true;
+
     try {
       await FlutterBluePlus.startScan(
         timeout: Duration(seconds: scanDurationSec),
       );
 
-      String? detectedProfileId;
-      _scanSubscription = FlutterBluePlus.scanResults.listen((results) {
-        for (var result in results) {
-          final serviceData = result.advertisementData.serviceData;
-          if (serviceData.containsKey(Guid(customServiceUuid))) {
-            detectedProfileId =
-                utf8.decode(serviceData[Guid(customServiceUuid)]!);
-            break;
-          }
+      _scanSub = FlutterBluePlus.scanResults.listen((results) async {
+        for (final r in results) {
+          final mData = r.advertisementData.manufacturerData;
+
+          if (!mData.containsKey(manufacturerId)) continue;
+
+          final data = mData[manufacturerId]!;
+          if (data.length < 17) continue;
+
+          // UUID復元
+          final uuidBytes = data.sublist(0, 16);
+          final version = data[16];
+
+          final detectedProfileId = Uuid.unparse(uuidBytes);
+
+          debugPrint(
+            '👀 検知！ profileId=$detectedProfileId version=$version',
+          );
+
+          // 二重検知防止
+          await FlutterBluePlus.stopScan();
+          _scanSub?.cancel();
+          _isScanning = false;
+
+          if (!mounted) return;
+
+          await _handleEncounter(detectedProfileId);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ScreenEncounter()),
+          );
+          return;
         }
       });
-
-      await Future.delayed(const Duration(seconds: 4));
-      await FlutterBluePlus.stopScan();
-      _isScanning = false;
-
-      if (detectedProfileId != null && mounted) {
-        await _handleEncounter(detectedProfileId!);
-        Navigator.push(context,
-            MaterialPageRoute(builder: (context) => const ScreenEncounter()));
-      }
-
-      if (mounted) {
-        await Future.delayed(const Duration(seconds: 2));
-        _startRepeatingScan();
-      }
     } catch (e) {
-      debugPrint('❌ BLEスキャンエラー: $e');
+      debugPrint('❌ Scan error: $e');
       _isScanning = false;
-      await Future.delayed(const Duration(seconds: 2));
-      _startRepeatingScan();
     }
   }
 
-  Future<void> _startBleAdvertising() async {
-    if (_myProfileId == null) return;
-    try {
-      final AdvertiseData advertiseData = AdvertiseData(
-        serviceUuid: customServiceUuid,
-        serviceData: utf8.encode(_myProfileId!),
-        includePowerLevel: true,
-      );
-      await _blePeripheral.start(advertiseData: advertiseData);
-    } catch (e) {
-      debugPrint('BLE Advertising Error: $e');
-    }
-  }
-
-  Future<void> _stopBleAdvertising() async => await _blePeripheral.stop();
+  // ...既存の_startBleAdvertising, _stopBleAdvertisingの重複定義を削除...
 
   Future<void> _handleEncounter(String id) async {
     Profile? profile = await _fetchProfileFromServer(id);

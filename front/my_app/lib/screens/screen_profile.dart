@@ -23,6 +23,8 @@ class ScreenProfile extends StatefulWidget {
 }
 
 class _ScreenProfileState extends State<ScreenProfile> {
+    int _currentVer = 1;
+    int get nextVer => _currentVer + 1;
   // --- 各種コントローラー ---
   final _nicknameController = TextEditingController();
   final _triviaController = TextEditingController();
@@ -606,7 +608,6 @@ class _ScreenProfileState extends State<ScreenProfile> {
           profileId: _profileService.generateProfileId(),
           nickname: _nicknameController.text,
           birthday: _birthdayController.text,
-          birthplace: _birthplaceController.text,
           birthplace: _birthplaceController.text,
           trivia: _triviaController.text,
         );
