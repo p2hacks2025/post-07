@@ -30,7 +30,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
   final _triviaController = TextEditingController();
   final _birthdayController = TextEditingController();
   final _birthplaceController = TextEditingController();
-  final _hehController = TextEditingController(text: '0');
+  final _heyController = TextEditingController(text: '0');
   
   // 紙吹雪用のコントローラー
   late ConfettiController _confettiController;
@@ -49,37 +49,11 @@ class _ScreenProfileState extends State<ScreenProfile> {
 
 
   @override
-  void initState() {
-    super.initState();
-    // 紙吹雪の再生時間を2秒に設定
-    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
-    
-    _loadMyProfileData();
-    
-    // へぇ数の入力に合わせてリアルタイムでカードの色を更新
-    _hehController.addListener(() {
-      if (mounted) {
-        setState(() {
-          _totalHehReceived = int.tryParse(_hehController.text) ?? 0;
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _nicknameController.dispose();
-    _triviaController.dispose();
-    _birthdayController.dispose();
-    _birthplaceController.dispose();
-    _hehController.dispose();
-    _confettiController.dispose(); // メモリ解放
-    super.dispose();
-  }
-
-@override
 void initState() {
   super.initState();
+
+  _confettiController =
+      ConfettiController(duration: const Duration(seconds: 2));
 
   final uid = widget.profileJson['uid'] as String;
   _currentVer = widget.profileJson['ver'] ?? 0;
@@ -91,9 +65,18 @@ void initState() {
   _birthplaceController.text = widget.profileJson['birthplace'] ?? '';
   _triviaController.text     = widget.profileJson['trivia'] ?? '';
 
-  _heyCount = widget.profileJson['hey'] ?? 0;
-  _heeController.text = _heyCount.toString(); // ★必ず String に
+  _heyController.text =
+      (widget.profileJson['hey'] ?? 0).toString();
+
+  _heyController.addListener(() {
+    if (mounted) {
+      setState(() {
+        _totalHehReceived = int.tryParse(_heyController.text) ?? 0;
+      });
+    }
+  });
 }
+
 
 
 Future<void> _loadProfileIfExists(String uid) async {
@@ -121,6 +104,7 @@ Future<void> _loadProfileIfExists(String uid) async {
       final data = decoded['data'];
 
       if (data == null) return;
+      
 
       setState(() {
         _nicknameController.text   = data['nickname'] ?? '';
@@ -128,7 +112,7 @@ Future<void> _loadProfileIfExists(String uid) async {
         _birthplaceController.text = data['birthplace'] ?? '';
         _triviaController.text    = data['trivia'] ?? '';
         _currentVer               = data['ver'] ?? 0;
-        _heeController.text       = data['hey'] ?? 0;
+        _heyController.text       = data['hey'] ?? 0;
 
       });
 
@@ -360,7 +344,7 @@ Future<void> _loadProfileIfExists(String uid) async {
           child: isPreview 
             ? Text('$_totalHehReceived', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 11))
             : TextField(
-                controller: _hehController,
+                controller: _heyController,
                 keyboardType: TextInputType.number,
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 11),
@@ -372,17 +356,7 @@ Future<void> _loadProfileIfExists(String uid) async {
   }
 
   // --- 写真関連 ---
-  Future<void> _pickImage(bool isProfile) async {
-    try {
-      final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-      if (pickedFile != null) {
-        setState(() {
-          if (isProfile) _profileImage = File(pickedFile.path);
-          else _triviaAiImage = File(pickedFile.path);
-        });
-      }
-    } catch (e) { debugPrint('画像選択エラー: $e'); }
-  }
+  
 
   Widget _buildPhotoBox({required String label, required IconData icon, required File? file, required VoidCallback? onTap}) {
     return GestureDetector(
@@ -473,34 +447,41 @@ Future<void> _loadProfileIfExists(String uid) async {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true'},
-        body: jsonEncode({
-          'nickname': _nicknameController.text,
-          'birthday': _birthdayController.text,
-          'birthplace': _birthplaceController.text,
-          'trivia': _triviaController.text,
-          'total_heh': int.tryParse(_hehController.text) ?? 0,
-        }),
+        body: jsonEncode(data),
       );
+      
+      if (!mounted) return;
+      
       if (response.statusCode == 200) {
         setState(() {
           _currentVer = nextVer; // ★ 保存成功後に反映
         });
 
+        widget.profileJson['ver'] = nextVer; // ← これ超重要
+
         final profile = Profile(
           profileId: _profileService.generateProfileId(),
           nickname: _nicknameController.text,
           birthday: _birthdayController.text,
-          hometown: _birthplaceController.text,
+          birthplace: _birthplaceController.text,
           trivia: _triviaController.text,
           
         );
         await _profileService.saveMyProfile(profile);
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存しました'), backgroundColor: Colors.green));
+        
+        final myEncounter = Encounter(profile: profile, encounterTime: DateTime.now());
+        await _profileService.saveEncounter(myEncounter);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('プロフィールを保存しました'), backgroundColor: Colors.green),
+        );
         Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存に失敗しました: ${response.statusCode}'), backgroundColor: Colors.orange));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e'), backgroundColor: Colors.red));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('接続エラー: $e'), backgroundColor: Colors.red));
     }
   }
 
