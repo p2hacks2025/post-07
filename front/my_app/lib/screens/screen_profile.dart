@@ -35,6 +35,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
 
   final ProfileService _profileService = ProfileService();
 
+  int _currentVer = 0;
   int _totalHehReceived = 0;
   File? _profileImage;
   File? _triviaAiImage;
@@ -573,6 +574,8 @@ class _ScreenProfileState extends State<ScreenProfile> {
 
   Future<void> _saveProfile() async {
     try {
+      final nextVer = _currentVer + 1;
+      
       final url = Uri.parse(
           'https://saliently-multiciliated-jacqui.ngrok-free.dev/save_profile');
       
@@ -606,7 +609,6 @@ class _ScreenProfileState extends State<ScreenProfile> {
           profileId: _profileService.generateProfileId(),
           nickname: _nicknameController.text,
           birthday: _birthdayController.text,
-          birthplace: _birthplaceController.text,
           birthplace: _birthplaceController.text,
           trivia: _triviaController.text,
         );

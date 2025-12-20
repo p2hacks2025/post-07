@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
 import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
 
 // 遷移先の各画面（プロジェクトに合わせてインポートパスを確認してください）
 import 'screen_profile.dart';
@@ -147,11 +148,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-
-
-
-
-
   Future<void> _initializeProfile() async {
     Profile? myProfile = await _profileService.loadMyProfile();
     if (myProfile == null) {
@@ -292,21 +288,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> _startBleAdvertising() async {
-    if (_myProfileId == null) return;
-    try {
-      final AdvertiseData advertiseData = AdvertiseData(
-        serviceUuid: customServiceUuid,
-        serviceData: utf8.encode(_myProfileId!),
-        includePowerLevel: true,
-      );
-      await _blePeripheral.start(advertiseData: advertiseData);
-    } catch (e) {
-      debugPrint('BLE Advertising Error: $e');
-    }
-  }
+  
 
-  Future<void> _stopBleAdvertising() async => await _blePeripheral.stop();
+  
 
   Future<void> _handleEncounter(String id) async {
     Profile? profile = await _fetchProfileFromServer(id);
