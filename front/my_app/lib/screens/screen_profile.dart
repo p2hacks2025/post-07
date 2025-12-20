@@ -37,7 +37,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
 
   final ProfileService _profileService = ProfileService();
 
-
+  // int _currentVer = 0; // ←重複のため削除
   int _totalHehReceived = 0;
   File? _profileImage;
   File? _triviaAiImage;
