@@ -45,10 +45,11 @@ class _ScreenHistoryState extends State<ScreenHistory> {
       // プロフィールデータからProfileオブジェクトを作成
       final profile = Profile.fromJson(profileData);
       
-      // 現在の日時ですれ違い情報を作成
+      // 現在の日時とバージョンですれ違い情報を作成
       final encounter = Encounter(
         profile: profile,
         encounterTime: DateTime.now(),
+        version: '1.0.0', // TODO: 必要に応じてアプリのバージョンを取得してセット
       );
       
       // ProfileServiceを使って保存
@@ -151,10 +152,24 @@ class _ScreenHistoryState extends State<ScreenHistory> {
                           children: [
                             const SizedBox(height: 4),
                             Text(
-                              _formatDateTime(encounter.encounterTime),
+                              '日付: ' + _formatDateTime(encounter.encounterTime),
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey.shade600,
+                              ),
+                            ),
+                            Text(
+                              'バージョン: ${encounter.version}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                            Text(
+                              'プロフィールID: ${encounter.profile.profileId}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade700,
                               ),
                             ),
                             if (encounter.profile.birthplace.isNotEmpty)
@@ -198,6 +213,8 @@ class _ScreenHistoryState extends State<ScreenHistory> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildDetailRow('すれ違った日時', _formatDateTime(encounter.encounterTime)),
+              _buildDetailRow('バージョン', encounter.version),
+              _buildDetailRow('プロフィールID', encounter.profile.profileId),
               if (encounter.profile.birthday.isNotEmpty)
                 _buildDetailRow('誕生日', encounter.profile.birthday),
               if (encounter.profile.birthplace.isNotEmpty)
