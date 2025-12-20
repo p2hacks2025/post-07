@@ -12,11 +12,17 @@ import '../models/profile.dart';
 import '../models/encounter.dart';
 
 class ScreenProfile extends StatefulWidget {
-  const ScreenProfile({super.key});
+  final Map<String, dynamic> profileJson;
+
+  const ScreenProfile({
+    super.key,
+    required this.profileJson,
+  });
 
   @override
   State<ScreenProfile> createState() => _ScreenProfileState();
 }
+
 
 class _ScreenProfileState extends State<ScreenProfile> {
   // --- 各種コントローラー ---
@@ -36,6 +42,8 @@ class _ScreenProfileState extends State<ScreenProfile> {
   File? _triviaAiImage;
 
   final ImagePicker _picker = ImagePicker();
+
+  
 
   @override
   void initState() {
@@ -66,18 +74,94 @@ class _ScreenProfileState extends State<ScreenProfile> {
     super.dispose();
   }
 
-  // --- データの読み込み ---
-  Future<void> _loadMyProfileData() async {
-    final myProfile = await _profileService.loadMyProfile();
-    if (myProfile != null) {
+  @override
+void initState() {
+  super.initState();
+
+  final uid = widget.profileJson['uid'];
+  _loadProfileIfExists(uid);
+
+  // 🔍 JSONの中身を確認
+  print('受け取った profileJson: ${widget.profileJson}');
+
+  // uid を読む
+ 
+  print('uid: $uid');
+
+  // もし将来データが増えたらここで展開できる
+  _nicknameController.text = widget.profileJson['nickname'] ?? '';
+  _birthdayController.text = widget.profileJson['birthday'] ?? '';
+  _birthplaceController.text = widget.profileJson['birthplace'] ?? '';
+  _triviaController.text = widget.profileJson['trivia'] ?? '';
+  _heeController.text = (widget.profileJson['hey'] ?? 0).toString();
+
+}
+
+Future<void> _loadProfileIfExists(String uid) async {
+  try {
+    final url = Uri.parse(
+      'https://saliently-multiciliated-jacqui.ngrok-free.dev/get_user_profile'
+    );
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
+      body: jsonEncode({
+        'id': uid,
+        'ver': 0,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+
+      // 👇 ここ超重要
+      final data = decoded['data'];
+
+      if (data == null) return;
+
       setState(() {
-        _nicknameController.text = myProfile.nickname;
-        _birthdayController.text = myProfile.birthday;
-        _birthplaceController.text = myProfile.birthplace;
-        _triviaController.text = myProfile.trivia;
-        _totalHehReceived = myProfile.totalHeh;
-        _hehController.text = _totalHehReceived.toString();
+        _nicknameController.text   = data['nickname'] ?? '';
+        _birthdayController.text   = data['birthday'] ?? '';
+        _birthplaceController.text = data['birthplace'] ?? '';
+        _triviaController.text    = data['trivia'] ?? '';
+    
+        _heeController.text       = data['hey'] ?? 0;
+
       });
+
+      debugPrint('プロフィール読込成功: ${data['nickname']}');
+    } 
+    else if (response.statusCode == 404) {
+      debugPrint('プロフィール未登録（新規）');
+    }
+  } catch (e) {
+    debugPrint('プロフィール取得エラー: $e');
+  }
+}
+
+
+
+
+
+  // ... (既存の _pickImage, _selectDate, _selectPrefecture, _buildPickerToolbar, _buildWheel は変更なし) ...
+  Future<void> _pickImage(bool isProfile) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        setState(() {
+          if (isProfile) {
+            _profileImage = File(pickedFile.path);
+          } else {
+            _triviaAiImage = File(pickedFile.path);
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('画像選択エラー: $e');
     }
   }
 
@@ -364,9 +448,29 @@ class _ScreenProfileState extends State<ScreenProfile> {
 
   // --- 保存処理 ---
   Future<void> _saveProfile() async {
+     print('--- ScreenProfile _saveProfile ---');
+    print('profileId: ${widget.profileJson['uid']}');
+
     try {
-      final url = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/save_profile');
-      final response = await http.post(url,
+      final url = Uri.parse('https://saliently-multiciliated-jacqui.ngrok-free.dev/save_profile');
+      final data = {
+        'nickname': _nicknameController.text,
+        'birthday': _birthdayController.text,
+        'birthplace': _birthplaceController.text,
+        'trivia': _triviaController.text,
+        'id': widget.profileJson['uid'],
+        'ver':0,
+        'hey':0
+      };
+
+      print(widget.profileJson['uid']);
+      
+      
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('保存中...')));
+      
+      final response = await http.post(
+        url,
         headers: {'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true'},
         body: jsonEncode({
           'nickname': _nicknameController.text,
@@ -379,9 +483,11 @@ class _ScreenProfileState extends State<ScreenProfile> {
       if (response.statusCode == 200) {
         final profile = Profile(
           profileId: _profileService.generateProfileId(),
-          nickname: _nicknameController.text, birthday: _birthdayController.text,
-          birthplace: _birthplaceController.text, trivia: _triviaController.text,
-          totalHeh: int.tryParse(_hehController.text) ?? 0,
+          nickname: _nicknameController.text,
+          birthday: _birthdayController.text,
+          hometown: _birthplaceController.text,
+          trivia: _triviaController.text,
+          
         );
         await _profileService.saveMyProfile(profile);
         if (!mounted) return;
