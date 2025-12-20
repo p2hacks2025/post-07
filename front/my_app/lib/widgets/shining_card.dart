@@ -76,10 +76,10 @@ class _ShiningCardState extends State<ShiningCard> with SingleTickerProviderStat
                       begin: begin,
                       end: end,
                       colors: [
-                        highlightColor.withOpacity(0.0),
-                        highlightColor.withOpacity(opacity),
-                        highlightColor.withOpacity(opacity * 0.5),
-                        highlightColor.withOpacity(0.0),
+                        highlightColor.withAlpha(0),
+                        highlightColor.withAlpha((opacity * 255).round()),
+                        highlightColor.withAlpha(((opacity * 0.5) * 255).round()),
+                        highlightColor.withAlpha(0),
                       ],
                       stops: [
                         (currentPos - 0.1).clamp(0.0, 1.0),
@@ -101,11 +101,11 @@ class _ShiningCardState extends State<ShiningCard> with SingleTickerProviderStat
                       gradient: LinearGradient(
                         begin: begin, end: end,
                         colors: [
-                          Colors.purple.withOpacity(0.2),
-                          Colors.blue.withOpacity(0.2),
-                          Colors.green.withOpacity(0.2),
-                          Colors.yellow.withOpacity(0.2),
-                          Colors.red.withOpacity(0.2),
+                            Colors.purple.withAlpha((0.2 * 255).round()),
+                          Colors.blue.withAlpha((0.2 * 255).round()),
+                          Colors.green.withAlpha((0.2 * 255).round()),
+                          Colors.yellow.withAlpha((0.2 * 255).round()),
+                          Colors.red.withAlpha((0.2 * 255).round()),
                         ],
                         stops: const [0.1, 0.3, 0.5, 0.7, 0.9],
                         transform: GradientRotation(_controller.value * 2 * pi),

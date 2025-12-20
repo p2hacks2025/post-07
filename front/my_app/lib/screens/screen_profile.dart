@@ -48,17 +48,18 @@ class _ScreenProfileState extends State<ScreenProfile> {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 2));
 
-    if (widget.profileJson.isNotEmpty && widget.profileJson['uid'] != null) {
-      final uid = widget.profileJson['uid'] as String;
-      _nicknameController.text = widget.profileJson['nickname'] ?? '';
-      _birthdayController.text = widget.profileJson['birthday'] ?? '';
-      _birthplaceController.text = widget.profileJson['birthplace'] ?? '';
-      _triviaController.text = widget.profileJson['trivia'] ?? '';
-      _hehController.text = (widget.profileJson['hey'] ?? 0).toString();
-      _loadProfileIfExists(uid);
-      debugPrint('Loaded profileJson for uid: $uid');
-    }
+    // 初期値を受け取った profileJson からセット
+    final uid = widget.profileJson['uid'];
+    _nicknameController.text = widget.profileJson['nickname'] ?? '';
+    _birthdayController.text = widget.profileJson['birthday'] ?? '';
+    _birthplaceController.text = widget.profileJson['birthplace'] ?? '';
+    _triviaController.text = widget.profileJson['trivia'] ?? '';
+    _hehController.text = (widget.profileJson['hey'] ?? 0).toString();
 
+    // サーバー上の最新データで上書き
+    _loadProfileIfExists(uid);
+
+    // へぇ数の入力に合わせてリアルタイムでカードの色を更新
     _hehController.addListener(() {
       if (mounted) {
         setState(() {
@@ -79,8 +80,10 @@ class _ScreenProfileState extends State<ScreenProfile> {
     super.dispose();
   }
 
+
+
   void _debugSimulateAiImageFetch() {
-    setState(() {
+  setState(() {
       _triviaAiImageUrl = 'https://picsum.photos/seed/trivia/200/200';
       _triviaAiImage = null;
     });
@@ -102,7 +105,7 @@ class _ScreenProfileState extends State<ScreenProfile> {
         },
         body: jsonEncode({
           'id': uid,
-          'ver': 0,
+          'ver': _currentVer,
         }),
       );
 
@@ -574,6 +577,10 @@ class _ScreenProfileState extends State<ScreenProfile> {
 
   Future<void> _saveProfile() async {
     try {
+    
+
+      debugPrint(widget.profileJson['uid']);
+
       final nextVer = _currentVer + 1;
       
       final url = Uri.parse(

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math';
 
 class ScreenMap extends StatefulWidget {
   const ScreenMap({super.key});
@@ -60,20 +59,7 @@ class _ScreenMapState extends State<ScreenMap> {
     'Okinawa': {'name': '沖縄', 'trivia': '美しい海と独自の文化。美ら海水族館が人気だよ。', 'isCollected': false},
   };
 
-  void _simulateStreetPass() {
-    final keys = _prefectureData.keys.toList();
-    final randomKey = keys[Random().nextInt(keys.length)];
-    setState(() {
-      _prefectureData[randomKey]!['isCollected'] = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${_prefectureData[randomKey]!['name']}の人とすれ違いました！'),
-        backgroundColor: Colors.orange,
-        duration: const Duration(seconds: 1),
-      ),
-    );
-  }
+
 
   Widget _buildPrefBox(String id, String label, {double width = 58, double height = 44}) {
     final data = _prefectureData[id] ?? {'name': label, 'trivia': 'まだデータがないよ', 'isCollected': false};
@@ -120,11 +106,11 @@ class _ScreenMapState extends State<ScreenMap> {
         height: height,
         margin: const EdgeInsets.all(2.0),
         decoration: BoxDecoration(
-          color: isCollected ? Colors.orange : Colors.white,
+          color: isCollected ? Theme.of(context).colorScheme.secondary : Colors.white,
           border: Border.all(color: Colors.grey.shade400, width: 1.0),
           borderRadius: BorderRadius.circular(6),
           boxShadow: isCollected 
-            ? [BoxShadow(color: Colors.orange.withOpacity(0.5), blurRadius: 10, spreadRadius: 1)] 
+            ? [BoxShadow(color: Theme.of(context).colorScheme.secondary.withAlpha((0.5 * 255).round()), blurRadius: 10, spreadRadius: 1)] 
             : [],
         ),
         alignment: Alignment.center,
@@ -296,12 +282,12 @@ class _ScreenMapState extends State<ScreenMap> {
         ),
       ),
       
-      floatingActionButton: FloatingActionButton.extended(
+     /* floatingActionButton: FloatingActionButton.extended(
         onPressed: _simulateStreetPass,
         label: const Text('すれ違いテスト'),
         icon: const Icon(Icons.person_add),
         backgroundColor: Colors.orange,
-      ),
+      ),*/  //デバック用
     );
   }
 }

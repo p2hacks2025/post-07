@@ -19,7 +19,7 @@ class _TriviaInputScreenState extends State<TriviaInputScreen> {
   
 
   Future<void> _submitProfile() async {
-    print("★ボタンが押されました！処理を開始します！"); // ←これを追加
+    debugPrint("★ボタンが押されました！処理を開始します！"); // ←これを追加
     // ★ここを今のngrokのURLに書き換えてください！
     // 例: 'https://xxxx-xxxx.ngrok-free.app/save_profile'
     final String url = 'https://cylinderlike-dana-cryoscopic.ngrok-free.dev/save_profile'; 
@@ -51,10 +51,10 @@ class _TriviaInputScreenState extends State<TriviaInputScreen> {
           _resultImageUrl = imageUrl;
         });
       } else {
-        print("エラー: ${response.statusCode}");
+        debugPrint("エラー: ${response.statusCode}");
       }
     } catch (e) {
-      print("通信エラー: $e");
+      debugPrint("通信エラー: $e");
     } finally {
       setState(() {
         _isLoading = false;
