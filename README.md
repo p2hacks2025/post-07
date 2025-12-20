@@ -90,4 +90,5 @@ Trinkle（トリンクル）
 - GitHub Copilot
 - Google Gemini
 - ngrok
+- Stable Diffusion
 - Visual Studio Code
