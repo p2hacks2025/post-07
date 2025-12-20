@@ -25,6 +25,8 @@ class ScreenProfile extends StatefulWidget {
 
 
 class _ScreenProfileState extends State<ScreenProfile> {
+    int _currentVer = 0;
+    int get nextVer => _currentVer + 1;
   // --- 各種コントローラー ---
   final _nicknameController = TextEditingController();
   final _triviaController = TextEditingController();
@@ -37,7 +39,8 @@ class _ScreenProfileState extends State<ScreenProfile> {
 
   final ProfileService _profileService = ProfileService();
 
-  int _totalHehReceived = 0; 
+  // int _currentVer = 0; // ←重複のため削除
+  int _totalHehReceived = 0;
   File? _profileImage;
   File? _triviaAiImage;
 
