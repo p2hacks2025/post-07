@@ -7,13 +7,15 @@ import 'package:http/http.dart' as http;
 import 'home_screen.dart';
 
 class ScreenInformation extends StatefulWidget {
-  const ScreenInformation({super.key});
+  final Map<String, dynamic>? profileJson;
+  const ScreenInformation({super.key, this.profileJson});
 
   @override
   State<ScreenInformation> createState() => _ScreenInformationState();
 }
 
 class _ScreenInformationState extends State<ScreenInformation> {
+    String? _resultImageUrl;
   final _nicknameController = TextEditingController();
   final _triviaController = TextEditingController();
   final _birthdayController = TextEditingController();
@@ -221,6 +223,9 @@ class _ScreenInformationState extends State<ScreenInformation> {
                     ? const CircularProgressIndicator()
                     : const Text('登録'),
               ),
+            ],
+          ),
+        ),
       ),
     );
   }
