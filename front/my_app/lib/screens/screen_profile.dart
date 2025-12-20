@@ -52,11 +52,14 @@ class _ScreenProfileState extends State<ScreenProfile> {
 void initState() {
   super.initState();
 
+  final uid = widget.profileJson['uid'];
+  _loadProfileIfExists(uid);
+
   // 🔍 JSONの中身を確認
   print('受け取った profileJson: ${widget.profileJson}');
 
   // uid を読む
-  final uid = widget.profileJson['uid'];
+ 
   print('uid: $uid');
 
   // もし将来データが増えたらここで展開できる
@@ -64,7 +67,58 @@ void initState() {
   _birthdayController.text = widget.profileJson['birthday'] ?? '';
   _birthplaceController.text = widget.profileJson['birthplace'] ?? '';
   _triviaController.text = widget.profileJson['trivia'] ?? '';
+  _heeController.text = (widget.profileJson['hey'] ?? 0).toString();
+
 }
+
+Future<void> _loadProfileIfExists(String uid) async {
+  try {
+    final url = Uri.parse(
+      'https://saliently-multiciliated-jacqui.ngrok-free.dev/get_user_profile'
+    );
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
+      body: jsonEncode({
+        'id': uid,
+        'ver': 0,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+
+      // 👇 ここ超重要
+      final data = decoded['data'];
+
+      if (data == null) return;
+
+      setState(() {
+        _nicknameController.text   = data['nickname'] ?? '';
+        _birthdayController.text   = data['birthday'] ?? '';
+        _birthplaceController.text = data['birthplace'] ?? '';
+        _triviaController.text    = data['trivia'] ?? '';
+    
+        _heeController.text       = data['hey'] ?? 0;
+
+      });
+
+      debugPrint('プロフィール読込成功: ${data['nickname']}');
+    } 
+    else if (response.statusCode == 404) {
+      debugPrint('プロフィール未登録（新規）');
+    }
+  } catch (e) {
+    debugPrint('プロフィール取得エラー: $e');
+  }
+}
+
+
+
 
 
   // ... (既存の _pickImage, _selectDate, _selectPrefecture, _buildPickerToolbar, _buildWheel は変更なし) ...
