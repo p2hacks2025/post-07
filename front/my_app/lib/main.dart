@@ -31,18 +31,22 @@ void main() async {
   }
   print("User ID: $userId"); // デバッグ用
 
+  final Map<String, dynamic> baseProfileJson = {
+    "uid": userId,
+  };
+
   // 結果をMyAppに渡してアプリを起動します
-  runApp(MyApp(isRegistered: isRegistered, userId: userId));
+  runApp(MyApp(isRegistered: isRegistered, profileJson: baseProfileJson,));
 }
 
 class MyApp extends StatelessWidget {
   final bool isRegistered;
-  final String userId;
+  final Map<String, dynamic> profileJson;
 
   const MyApp({
     super.key, 
     required this.isRegistered, 
-    required this.userId,
+    required this.profileJson,
   });
 
   @override
@@ -68,11 +72,11 @@ class MyApp extends StatelessWidget {
       
       // ★★★ ここを修正しました ★★★
       // いきなり分岐せず、まずはスタート画面を表示します
-      home: ScreenStart(isRegistered: isRegistered),
+      home: ScreenStart(isRegistered: isRegistered,profileJson: profileJson,),
       
       // ルーティング設定
       routes: {
-        '/home': (context) => const HomeScreen(),
+        // '/home': (context) => const HomeScreen(),
         '/birthday': (context) => const ScreenBirthday(),
         // まだ作っていない画面の仮置き
         '/profile': (context) => const PlaceholderScreen(title: 'マイプロフィール'),

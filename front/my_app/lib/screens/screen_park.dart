@@ -106,14 +106,21 @@ class _ScreenElevenState extends State<ScreenEleven> with TickerProviderStateMix
 
   // ( _onCardComplete メソッドは変更なしのため中略 )
   void _onCardComplete(int index) async {
+
     if (_isProcessing) return;
     setState(() => _isProcessing = true);
+   
+  
+
+    // へぇ数をバックエンドに送信
     try {
-      final url = Uri.parse('http://localhost:5000/save_profile'); // 必要に応じてIP修正
+      final url = Uri.parse('https://saliently-multiciliated-jacqui.ngrok-free.dev/heyplus');
+      
       final data = {
-        'nickname': 'テストユーザー',
-        'trivia': 'カード${index + 1}: へぇ数${_heeCounts[index]}',
-        'hey_count': _heeCounts[index],
+        'id': 'abcde', //仮置き
+        'ver':0,//仮置き
+        'pushedhey': _heeCounts[index], // 追加情報として送信
+
       };
       final response = await http.post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode(data)).timeout(const Duration(seconds: 5));
       

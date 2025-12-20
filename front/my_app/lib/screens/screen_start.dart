@@ -4,7 +4,9 @@ import 'screen_information.dart';
 
 class ScreenStart extends StatefulWidget {
   final bool isRegistered;
-  const ScreenStart({super.key, required this.isRegistered});
+  final Map<String, dynamic> profileJson; // ★ 追加
+
+  const ScreenStart({super.key, required this.isRegistered,required this.profileJson,});
 
   @override
   State<ScreenStart> createState() => _ScreenStartState();
@@ -24,10 +26,14 @@ class _ScreenStartState extends State<ScreenStart> {
     await Future.delayed(const Duration(milliseconds: 300));
 
     if (!mounted) return;
+
+     // 🔍 デバッグ：idだけのJSON確認
+    debugPrint("現在の profileJson:");
+    debugPrint(widget.profileJson.toString());
     
-          Navigator.pushReplacement(
+    Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => HomeScreen(profileJson: widget.profileJson)),
       );
 
     // 3. 次の画面へ遷移

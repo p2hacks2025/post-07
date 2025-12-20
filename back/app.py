@@ -47,7 +47,7 @@ def trivia_trueorfalse(trivia: str):
         return True
     if text == "False":
         return False
-    return None
+    return False
 
 @app.route('/save_profile', methods=['POST'])
 def save_profile():

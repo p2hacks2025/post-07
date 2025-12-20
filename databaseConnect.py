@@ -17,7 +17,7 @@ def initialize():
         
         # 初期化（バケット名はあなたのプロジェクトIDに合わせています）
         firebase_admin.initialize_app(cred, {
-            'storageBucket': 'hakodate-ar-2025.appspot.com' 
+            'storageBucket': 'hakodate-ar-2025.firebasestorage.app' 
         })
         
         _db = firestore.client()

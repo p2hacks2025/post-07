@@ -19,11 +19,25 @@ import '../models/profile.dart';
 import '../models/encounter.dart';
 
 void main() {
-  runApp(const MaterialApp(home: HomeScreen()));
+  runApp(
+    MaterialApp(
+      home: HomeScreen(
+        profileJson: {
+          "uid": "debug-uid-001",
+        },
+      ),
+    ),
+  );
 }
 
+
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final Map<String, dynamic> profileJson;
+
+  const HomeScreen({
+    super.key,
+    required this.profileJson,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -55,6 +69,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     // フッターのアイコン間隔を調整するPageController
+     // ★ JSON から uid を取得
+    _myProfileId = widget.profileJson["uid"] as String?;
+
     _pageController = PageController(
       initialPage: _selectedIndex,
       viewportFraction: 0.15, // アイコンの密度を調整
@@ -150,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<Profile?> _fetchProfileFromServer(String id) async {
     try {
-      final url = Uri.parse('https://cylinderlike-dana-cryoscopic.ngrok-free.dev/get_profile');
+      final url = Uri.parse('https://saliently-multiciliated-jacqui.ngrok-free.dev/get_profile');
       final res = await http.get(url, headers: {'ngrok-skip-browser-warning': 'true'}).timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
@@ -175,7 +192,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (index == _selectedIndex) {
       Widget? target;
       switch (index) {
-        case 1: target = const ScreenProfile(); break;
+        case 1: target = ScreenProfile(profileJson:
+                      widget.profileJson); break;
         case 2: target = const ScreenMap(); break;
         case 3: target = const ScreenBirthday(); break;
         case 4: target = const ScreenEleven(); break; // 前回の画面11
