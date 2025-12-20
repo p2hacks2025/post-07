@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_ble_peripheral/flutter_ble_peripheral.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter/material.dart';
 
 // 遷移先の各画面（プロジェクトに合わせてインポートパスを確認してください）
 import 'screen_profile.dart';

@@ -34,4 +34,4 @@ flutter:
     - lib/json/prefecher.json
     - lib/json/birthday.json
     - lib/json/birthday_trivia.json
-    - assets/images/
+    - assets/images/title_bg.png

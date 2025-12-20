@@ -9,7 +9,6 @@ import 'dart:convert';
 import 'dart:math'; 
 import '../services/profile_service.dart';
 import '../models/profile.dart';
-import '../models/encounter.dart';
 
 class ScreenProfile extends StatefulWidget {
   final Map<String, dynamic> profileJson;
