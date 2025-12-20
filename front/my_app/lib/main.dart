@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'; 
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 
-// ▼ 実際のファイル構成に合わせてimportを確認してください
 import 'screens/home_screen.dart'; 
-import 'screens/screen_information.dart'; 
 import 'screens/screen_birthday.dart'; 
-import 'screens/screen_start.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,31 +14,11 @@ void main() async {
     DeviceOrientation.landscapeRight,
   ]);
 
-  // アプリ起動時に「登録済みかどうか」のチェックを行います
-  final prefs = await SharedPreferences.getInstance();
-  final bool isRegistered = prefs.getBool('isRegistered') ?? false;
-
-  // ■ ユーザ固有IDを取得 or 初回生成
-  String? userId = prefs.getString('user_id');
-  if (userId == null) {
-    userId = const Uuid().v4(); // UUIDを生成
-    await prefs.setString('user_id', userId); // 保存
-  }
-  print("User ID: $userId"); // デバッグ用
-
-  // 結果をMyAppに渡してアプリを起動します
-  runApp(MyApp(isRegistered: isRegistered, userId: userId));
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final bool isRegistered;
-  final String userId;
-
-  const MyApp({
-    super.key, 
-    required this.isRegistered, 
-    required this.userId,
-  });
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -66,9 +41,8 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       
-      // ★★★ ここを修正しました ★★★
-      // いきなり分岐せず、まずはスタート画面を表示します
-      home: ScreenStart(isRegistered: isRegistered),
+      // HomeScreenを最初の画面に設定
+      home: const HomeScreen(),
       
       // ルーティング設定
       routes: {
