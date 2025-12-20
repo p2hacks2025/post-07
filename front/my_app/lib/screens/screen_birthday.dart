@@ -18,6 +18,7 @@ class _ScreenBirthdayState extends State<ScreenBirthday> {
   // JSON 読み込み済み誕生日データ
   Map<String, bool> _birthdayData = {};
   bool _isLoading = true;
+  Map<String, String> _triviaData = {};
 
   @override
   void initState() {
@@ -29,27 +30,27 @@ class _ScreenBirthdayState extends State<ScreenBirthday> {
     _loadBirthdayJson();
   }
 
-  Future<void> _loadBirthdayJson() async {
-    try {
-      final jsonString = await rootBundle.loadString('lib/json/birthday.json');
-      final Map<String, dynamic> jsonMap = json.decode(jsonString);
+ Future<void> _loadBirthdayJson() async {
+  try {
+    // 1. 獲得状況 (true/false) を読み込む
+    final statusString = await rootBundle.loadString('lib/json/birthday.json');
+    final Map<String, dynamic> statusMap = json.decode(statusString);
 
-    
+    // 2. トリビア文言を読み込む
+    final triviaString = await rootBundle.loadString('lib/json/birthday_trivia.json');
+    final Map<String, dynamic> triviaMap = json.decode(triviaString);
 
-      setState(() {
-        _birthdayData = jsonMap.map((key, value) => MapEntry(key, value as bool));
-        _isLoading = false;
-
-        
-      });
-    } catch (e) {
-      setState(() {
-        _birthdayData = {};
-        _isLoading = false;
-      });
-      debugPrint("JSON読み込み失敗: $e");
-    }
+    setState(() {
+      _birthdayData = statusMap.map((key, value) => MapEntry(key, value as bool));
+      // dynamic型をString型に変換して格納
+      _triviaData = triviaMap.map((key, value) => MapEntry(key, value.toString()));
+      _isLoading = false;
+    });
+  } catch (e) {
+    debugPrint("読み込み失敗: $e");
+    setState(() => _isLoading = false);
   }
+}
 
   @override
   void dispose() {
@@ -72,15 +73,23 @@ class _ScreenBirthdayState extends State<ScreenBirthday> {
     });
   }
 
-  Widget _buildDateCell(int day, int month) {
-  // JSONキーに合わせて "/" 区切りにする
-  final key = "${month.toString().padLeft(2,'0')}/${day.toString().padLeft(2,'0')}";
-  final isCollected = _birthdayData[key] ?? false;
+Widget _buildDateCell(int day, int month) {
+  // JSONのキー形式 "01/01" に合わせる
+  final String key = "${month.toString().padLeft(2, '0')}/${day.toString().padLeft(2, '0')}";
+  
+  // データの存在確認。まだ読み込み中やキーがない場合は false にする
+  final bool isCollected = _birthdayData[key] ?? false;
+  
+  // トリビアを取得（タップした時に使う）
+  final String triviaText = _triviaData[key] ?? "この日のトリビアを読み込み中です...";
 
   return AnimatedContainer(
+    // AnimatedContainerには必ず duration（アニメーション時間）が必要です
     duration: const Duration(milliseconds: 500),
+    margin: const EdgeInsets.all(2), // 隣のセルとの隙間
     decoration: BoxDecoration(
-      color: isCollected ? Colors.pinkAccent : Colors.grey.shade200, // trueならピンク、falseならグレー
+      // 獲得済みならピンク、未獲得ならグレー
+      color: isCollected ? Colors.pinkAccent : Colors.grey.shade200,
       borderRadius: BorderRadius.circular(8),
       border: Border.all(
         color: isCollected ? Colors.redAccent : Colors.grey.shade400,
@@ -91,19 +100,15 @@ class _ScreenBirthdayState extends State<ScreenBirthday> {
           : [],
     ),
     child: InkWell(
+      borderRadius: BorderRadius.circular(8),
       onTap: () {
         if (isCollected) {
-          showDialog(
-            context: context,
-            builder: (_) => AlertDialog(
-              title: Text('$month月$day日'),
-              content: const Text('獲得済みです！'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('閉じる'),
-                )
-              ],
+          _showTriviaDialog(month, day, triviaText);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$month月$day日の人とすれ違うと解放されます！'),
+              duration: const Duration(seconds: 1),
             ),
           );
         }
@@ -118,6 +123,25 @@ class _ScreenBirthdayState extends State<ScreenBirthday> {
           ),
         ),
       ),
+    ),
+  );
+}
+
+// ダイアログを表示する処理を外に切り出すとコードがスッキリします
+void _showTriviaDialog(int month, int day, String trivia) {
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text('✨ $month月$day日のトリビア ✨',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.pink)),
+      content: Text(trivia, style: const TextStyle(fontSize: 16, height: 1.5)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('閉じる', style: TextStyle(fontWeight: FontWeight.bold)),
+        )
+      ],
     ),
   );
 }
