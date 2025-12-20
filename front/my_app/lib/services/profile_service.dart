@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 import 'package:http/http.dart' as http; // 追加
+=======
+
+import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
+>>>>>>> 3233e9f033a54eb33c325c25ae3dac47152fd372
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../models/profile.dart';
