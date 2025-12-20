@@ -21,8 +21,8 @@ import '../models/encounter.dart';
 
 const int manufacturerId = 0x1234; // 任意の2byte (0xFFFF以下)
 const int appVersion = 1; // 例: アプリのバージョン番号
-const int scanDurationSec = 5; // Scan時間（秒）
-const int advertiseDurationSec = 5; // Advertise時間（秒）
+const int scanDurationSec = 2; // Scan時間（秒）
+const int advertiseDurationSec = 2; // Advertise時間（秒）
 
 void main() {
   runApp(
@@ -126,6 +126,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     // ★ JSON から uid を取得
     _myProfileId = widget.profileJson["uid"] as String?;
 
+    debugPrint( widget.profileJson["uid"]);
+
     _pageController = PageController(
       initialPage: _selectedIndex,
       viewportFraction: 0.15, // アイコンの密度を調整
@@ -163,10 +165,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _myProfileId = myProfile.profileId;
     }
 
+    // profileIdバイト列を必ず初期化
+    _initProfileIdBytes();
+
     // ★★★ エミュレーター対策：ここをコメントアウトしました ★★★
     // エミュレーターはBluetoothを使えないため、ここでエラーになります。
     // 実機でテストするときは、ここのコメントアウト（//）を外してください。
-    
     // await _startBleAdvertising(); 
     // _startRepeatingScan();
   }
@@ -249,80 +253,117 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _startBleScan() async {
     if (_isScanning) return;
     _isScanning = true;
+
     try {
       await FlutterBluePlus.startScan(
         timeout: Duration(seconds: scanDurationSec),
       );
 
-      String? detectedProfileId;
-      _scanSubscription = FlutterBluePlus.scanResults.listen((results) {
-        for (var result in results) {
-          final serviceData = result.advertisementData.serviceData;
-          if (serviceData.containsKey(Guid(customServiceUuid))) {
-            detectedProfileId =
-                utf8.decode(serviceData[Guid(customServiceUuid)]!);
-            break;
+      _scanSub = FlutterBluePlus.scanResults.listen((results) async {
+        for (final r in results) {
+          final mData = r.advertisementData.manufacturerData;
+
+          if (!mData.containsKey(manufacturerId)) continue;
+
+          final data = mData[manufacturerId]!;
+          if (data.length < 17) continue;
+
+          // UUID復元
+          final uuidBytes = data.sublist(0, 16);
+          final version = data[16];
+
+          final detectedProfileId = Uuid.unparse(uuidBytes);
+
+          debugPrint(
+            '👀 検知！ profileId=$detectedProfileId version=$version',
+          );
+
+          // 二重検知防止
+          await FlutterBluePlus.stopScan();
+          _scanSub?.cancel();
+          _isScanning = false;
+
+          if (!mounted) return;
+
+          // 直近5分以内の同一IDがあればスキップ
+          final history = await _profileService.loadEncounterHistory();
+          final now = DateTime.now();
+          final recent = history.where((e) =>
+            e.profile.profileId == detectedProfileId &&
+            now.difference(e.encounterTime).inMinutes < 5
+          );
+          if (recent.isNotEmpty) {
+            // 5分以内なら何もしない
+            return;
           }
+          // 5分以上経過していれば保存・遷移
+          await _handleEncounter(detectedProfileId);
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ScreenEncounter()),
+          );
+          return;
         }
       });
-
-      await Future.delayed(const Duration(seconds: 4));
-      await FlutterBluePlus.stopScan();
-      _isScanning = false;
-
-      if (detectedProfileId != null && mounted) {
-        await _handleEncounter(detectedProfileId!);
-        Navigator.push(context,
-            MaterialPageRoute(builder: (context) => const ScreenEncounter()));
-      }
-
-      if (mounted) {
-        await Future.delayed(const Duration(seconds: 2));
-        _startRepeatingScan();
-      }
     } catch (e) {
-      debugPrint('❌ BLEスキャンエラー: $e');
+      debugPrint('❌ Scan error: $e');
       _isScanning = false;
-      await Future.delayed(const Duration(seconds: 2));
-      _startRepeatingScan();
     }
   }
 
-  
+  // ...既存の_startBleAdvertising, _stopBleAdvertisingの重複定義を削除...
 
-  
-
-  Future<void> _handleEncounter(String id) async {
-    Profile? profile = await _fetchProfileFromServer(id);
-    profile ??= Profile(
-        profileId: id,
-        nickname: 'すれ違った人',
-        birthday: '',
-        birthplace: '',
-        trivia: '');
+  Future<void> _handleEncounter(String id, {int? version}) async {
+    Profile? fetched = await _fetchProfileFromServer(id, version: version);
+    final profile = fetched ?? Profile(
+      profileId: id,
+      nickname: 'すれ違った人',
+      birthday: '',
+      birthplace: '',
+      trivia: '',
+    );
+    setState(() {
+      _profiles.add({
+        'nickname': profile.nickname,
+        'birthday': profile.birthday,
+        'birthplace': profile.birthplace,
+        'trivia': profile.trivia,
+        'color': Colors.grey.shade200, // デフォルト色
+        'icon': Icons.face, // デフォルトアイコン
+      });
+    });
     await _profileService.saveEncounter(
-        Encounter(profile: profile, encounterTime: DateTime.now()));
+      Encounter(profile: profile, encounterTime: DateTime.now(), version: (version?.toString() ?? '1.0.0')));
   }
 
   Future<void> stopScan() async {
     await FlutterBluePlus.stopScan();
   }
 
-  Future<Profile?> _fetchProfileFromServer(String id) async {
+  Future<Profile?> _fetchProfileFromServer(String id, {int? version}) async {
     try {
-      final url = Uri.parse(
-          'https://saliently-multiciliated-jacqui.ngrok-free.dev/get_profile');
-      final res = await http.get(url, headers: {
-        'ngrok-skip-browser-warning': 'true'
-      }).timeout(const Duration(seconds: 5));
+      final url = Uri.parse('https://saliently-multiciliated-jacqui.ngrok-free.dev/get_profile');
+      final res = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+        body: jsonEncode({
+          'id': id,
+          'ver': version ?? 1,
+        }),
+      ).timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {
         final d = jsonDecode(res.body);
+        final data = d['data'] ?? {};
         return Profile(
-            profileId: id,
-            nickname: d['nickname'] ?? '',
-            birthday: d['birthday'] ?? '',
-            birthplace: d['birthplace'] ?? '',
-            trivia: d['trivia'] ?? '');
+          profileId: data['id'] ?? id,
+          nickname: data['nickname'] ?? '',
+          birthday: data['birthday'] ?? '',
+          birthplace: data['birthplace'] ?? '',
+          trivia: data['trivia'] ?? '',
+        );
       }
     } catch (e) {
       return null;
