@@ -81,7 +81,9 @@ Trinkle（トリンクル）
 ### その他開発に使用したツール・サービス
 - Android studio
 - Blender
+- Bluetooth Low Energy
 - Canva
+- CapCut
 - ChatGPT
 - Figma
 - Firebase
@@ -92,4 +94,3 @@ Trinkle（トリンクル）
 - ngrok
 - Stable Diffusion
 - Visual Studio Code
-- Bluetooth Low Energy
