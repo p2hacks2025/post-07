@@ -259,7 +259,7 @@ class _ScreenInformationState extends State<ScreenInformation> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
+                            color: Colors.black.withAlpha((0.3 * 255).round()),
                             blurRadius: 10,
                             offset: const Offset(4, 4),
                           ),
@@ -391,7 +391,7 @@ class _ScreenInformationState extends State<ScreenInformation> {
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.blueGrey[50],
-        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+        border: Border.all(color: Theme.of(context).colorScheme.primary.withAlpha((0.3 * 255).round())),
         borderRadius: BorderRadius.circular(6),
       ),
       child: ClipRRect(

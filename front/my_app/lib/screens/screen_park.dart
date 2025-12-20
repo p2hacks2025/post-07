@@ -192,7 +192,7 @@ class _ScreenElevenState extends State<ScreenEleven> with TickerProviderStateMix
         width: MediaQuery.of(context).size.width * 0.85,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.9),
+          color: Colors.red.withAlpha((0.9 * 255).round()),
           borderRadius: BorderRadius.circular(20),
           boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 10)],
         ),

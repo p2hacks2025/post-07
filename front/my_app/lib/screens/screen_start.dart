@@ -4,109 +4,112 @@ import 'screen_information.dart';
 
 class ScreenStart extends StatefulWidget {
   final bool isRegistered;
-  final Map<String, dynamic> profileJson; // ★ 追加
+  final Map<String, dynamic> profileJson;
 
-  const ScreenStart({super.key, required this.isRegistered,required this.profileJson,});
+  const ScreenStart({
+    super.key,
+    required this.isRegistered,
+    required this.profileJson,
+  });
 
   @override
   State<ScreenStart> createState() => _ScreenStartState();
 }
 
 class _ScreenStartState extends State<ScreenStart> {
-  // 光の不透明度を管理する変数
   double _flashOpacity = 0.0;
 
   Future<void> _handleStart() async {
-    // 1. 画面を一瞬で光らせる
     setState(() {
       _flashOpacity = 1.0;
     });
 
-    // 2. 光の演出のために少しだけ待つ（0.3秒程度）
-    await Future.delayed(const Duration(milliseconds: 300));
-
+    await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
-     // 🔍 デバッグ：idだけのJSON確認
-    debugPrint("現在の profileJson:");
-    debugPrint(widget.profileJson.toString());
-    
-    Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen(profileJson: widget.profileJson)),
-      );
-
-    // 3. 次の画面へ遷移
     if (widget.isRegistered) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => HomeScreen(profileJson: widget.profileJson)),
       );
     } else {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const ScreenInformation()),
+        MaterialPageRoute(builder: (context) => ScreenInformation(profileJson: widget.profileJson)),
       );
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
+    const Color themeColor = Color(0xFF9787EA);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: themeColor,
       body: GestureDetector(
-        onTap: _handleStart, // タップ時にメソッドを呼び出す
+        onTap: _handleStart,
         child: Stack(
           children: [
-            // --- レイヤー1: 元々のコンテンツ ---
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.touch_app_rounded,
-                    size: 100,
-                    color: Colors.green,
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'TAP TO START',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2.0,
-                      color: Colors.black54,
+            Column(
+              children: [
+                // 1. 上側の余白
+                const SizedBox(height: 60),
+
+                // 2. 画像エリア
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    alignment: Alignment.center, 
+                    child: Transform.scale(
+                      scale: 0.8, // ★ 1.2 から 1.1 に少し小さくしました
+                      child: Image.asset(
+                        'assets/images/title_bg.png',
+                        width: double.infinity,
+                        fit: BoxFit.fitWidth, 
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    '画面をタッチしてはじめる',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+
+                // 3. 下側の文字エリア
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 60.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text(
+                        'TAP TO START',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2.0,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        '画面をタッチしてはじめる',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
 
-            // --- レイヤー2: 発光エフェクト用の白い板 ---
-            IgnorePointer( // このレイヤーがタップを邪魔しないようにする
+            // --- 発光エフェクト ---
+            IgnorePointer(
               child: AnimatedOpacity(
                 opacity: _flashOpacity,
-                duration: const Duration(milliseconds: 200), // じわっと光る速度
+                duration: const Duration(milliseconds: 200),
                 curve: Curves.easeIn,
                 child: Container(
                   width: double.infinity,
                   height: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.white, // ここを Colors.yellow にすると黄色く光ります
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.white.withOpacity(0.8),
-                        blurRadius: 50,
-                        spreadRadius: 50,
-                      ),
-                    ],
-                  ),
+                  color: Colors.white.withOpacity(0.5),
                 ),
               ),
             ),

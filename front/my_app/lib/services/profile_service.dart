@@ -1,5 +1,6 @@
-import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../models/profile.dart';
@@ -31,11 +32,11 @@ class ProfileService {
       if (response.statusCode == 200) {
         return Profile.fromJsonString(response.body);
       } else {
-        print('サーバーエラー: ${response.statusCode}');
+        debugPrint('サーバーエラー: ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      print('サーバー接続エラー: $e');
+      debugPrint('サーバー接続エラー: $e');
       return null;
     }
   }
@@ -58,7 +59,7 @@ class ProfileService {
     try {
       return Profile.fromJsonString(jsonString);
     } catch (e) {
-      print('プロフィール読み込みエラー: $e');
+      debugPrint('プロフィール読み込みエラー: $e');
       return null;
     }
   }
@@ -87,7 +88,7 @@ class ProfileService {
     try {
       return jsonList.map((jsonString) => Encounter.fromJsonString(jsonString)).toList();
     } catch (e) {
-      print('履歴読み込みエラー: $e');
+      debugPrint('履歴読み込みエラー: $e');
       return [];
     }
   }
@@ -126,7 +127,7 @@ class ProfileService {
     try {
       return jsonList.map((jsonString) => TriviaCard.fromJsonString(jsonString)).toList();
     } catch (e) {
-      print('展示カード読み込みエラー: $e');
+      debugPrint('展示カード読み込みエラー: $e');
       return [];
     }
   }

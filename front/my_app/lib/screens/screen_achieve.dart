@@ -88,14 +88,14 @@ class _ScreenAchieveState extends State<ScreenAchieve> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('トロフィー・達成項目', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.green.shade600,
+        backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator()) // 読み込み中はくるくるを表示
         : Container(
-            color: Colors.green.shade600,
+            color: Theme.of(context).primaryColor,
             child: Column(
               children: [
                 const SizedBox(height: 10),
@@ -111,7 +111,7 @@ class _ScreenAchieveState extends State<ScreenAchieve> {
                         value: '$_encounteredCount',
                         unit: '人',
                         icon: Icons.people,
-                        color: Colors.blue.shade50,
+                        color: Theme.of(context).colorScheme.primary.withAlpha((0.1 * 255).round()),
                         progress: _encounteredCount / 100, // 目標100人
                       ),
                       
@@ -121,7 +121,7 @@ class _ScreenAchieveState extends State<ScreenAchieve> {
                         value: '$_prefectureCount',
                         unit: '/ 47',
                         icon: Icons.map,
-                        color: Colors.orange.shade50,
+                        color: Theme.of(context).colorScheme.secondary.withAlpha((0.1 * 255).round()),
                         progress: _prefectureCount / 47,
                       ),
                       
@@ -131,7 +131,7 @@ class _ScreenAchieveState extends State<ScreenAchieve> {
                         value: '$_birthdayCount',
                         unit: '種類',
                         icon: Icons.cake,
-                        color: Colors.pink.shade50,
+                        color: Theme.of(context).colorScheme.secondary.withAlpha((0.08 * 255).round()),
                         progress: _birthdayCount / 366, // 366日
                       ),
 
@@ -141,7 +141,7 @@ class _ScreenAchieveState extends State<ScreenAchieve> {
                         value: '$_heeCount',
                         unit: '回',
                         icon: Icons.lightbulb_outline, 
-                        color: Colors.yellow.shade100, 
+                        color: Theme.of(context).colorScheme.secondary.withAlpha((0.22 * 255).round()), 
                         progress: _heeCount / 500, // 目標500回
                       ),
                     ],
