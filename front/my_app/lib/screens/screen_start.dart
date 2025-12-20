@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/screens/screen_information.dart';
 import 'home_screen.dart';
 
 class ScreenStart extends StatefulWidget {
@@ -30,23 +31,18 @@ class _ScreenStartState extends State<ScreenStart> {
     debugPrint("現在の profileJson:");
     debugPrint(widget.profileJson.toString());
     
-    Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen(profileJson: widget.profileJson)),
-      );
-
     // 3. 次の画面へ遷移
-   /* if (widget.isRegistered) {
+    if (widget.isRegistered) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => HomeScreen(profileJson: widget.profileJson)),
       );
     } else {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const ScreenInformation()),
       );
-    }*/
+    }
   }
 
 
