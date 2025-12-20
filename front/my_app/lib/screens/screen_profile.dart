@@ -269,75 +269,191 @@ class _ScreenProfileState extends State<ScreenProfile> {
   }
 
   Widget _buildCardBase({required bool isPreview}) {
-    return AspectRatio(
-      aspectRatio: 1.58,
-      child: Container(
-        decoration: _getCardDecoration(_totalHehReceived, isPreview),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              isPreview
-                  ? Text(
-                      _nicknameController.text.isEmpty
-                          ? 'ニックネーム'
-                          : _nicknameController.text,
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold))
-                  : _buildNicknameField(),
-              const Divider(color: Colors.black, thickness: 2, height: 10),
-              Expanded(
-                child: Row(
+    // screen_information.dartのUI構成を参考に移植
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double cardHeight = constraints.maxHeight;
+        double cardWidth = cardHeight * 1.58;
+        if (cardWidth > constraints.maxWidth) {
+          cardWidth = constraints.maxWidth;
+        }
+        return Center(
+          child: SizedBox(
+            width: cardWidth,
+            height: cardHeight,
+            child: Container(
+              decoration: _getCardDecoration(_totalHehReceived, isPreview),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
                   children: [
+                    // ニックネーム
+                    isPreview
+                        ? Text(
+                            _nicknameController.text.isEmpty
+                                ? 'ニックネーム'
+                                : _nicknameController.text,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))
+                        : SizedBox(
+                            height: 35,
+                            child: TextFormField(
+                              controller: _nicknameController,
+                              decoration: const InputDecoration(
+                                labelText: 'ニックネーム',
+                                isDense: true,
+                                border: OutlineInputBorder(),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4)),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                    const SizedBox(height: 8),
                     Expanded(
-                      flex: 4,
-                      child: Column(
+                      child: Row(
                         children: [
+                          // 左側：画像枠エリア
                           Expanded(
-                              child: _buildPhotoBox(
-                                  label: '写真',
-                                  icon: Icons.person,
-                                  file: _profileImage,
-                                  imageUrl: null,
-                                  onTap: isPreview
-                                      ? null
-                                      : () => _pickImage(true))),
-                          const SizedBox(height: 4),
+                            flex: 4,
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: _buildPhotoBox(
+                                    label: 'プロフィール写真',
+                                    icon: Icons.person,
+                                    file: _profileImage,
+                                    imageUrl: null,
+                                    onTap: isPreview ? null : () => _pickImage(true),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Expanded(
+                                  child: _buildPhotoBox(
+                                    label: 'AI画像',
+                                    icon: Icons.smart_toy,
+                                    file: _triviaAiImage,
+                                    imageUrl: _triviaAiImageUrl,
+                                    onTap: isPreview ? null : () => _pickImage(false),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // 右側：入力エリア
                           Expanded(
-                              child: _buildPhotoBox(
-                                  label: 'AI画像',
-                                  icon: Icons.smart_toy,
-                                  file: _triviaAiImage,
-                                  imageUrl: _triviaAiImageUrl,
-                                  onTap: isPreview
-                                      ? null
-                                      : () => _pickImage(false))),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 6,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildInfoItem('誕生日', _birthdayController.text,
-                              isPreview, _selectDate),
-                          _buildInfoItem('出身地', _birthplaceController.text,
-                              isPreview, _selectPrefecture),
-                          Expanded(child: _buildTriviaAndHeh(isPreview)),
+                            flex: 6,
+                            child: Column(
+                              children: [
+                                SizedBox(
+                                  height: 32,
+                                  child: TextFormField(
+                                    controller: _birthdayController,
+                                    readOnly: true,
+                                    onTap: isPreview ? null : _selectDate,
+                                    style: const TextStyle(fontSize: 13),
+                                    decoration: const InputDecoration(
+                                      labelText: '誕生日',
+                                      labelStyle: TextStyle(fontSize: 11),
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                      border: OutlineInputBorder(),
+                                      suffixIcon: Icon(Icons.arrow_drop_down, size: 18),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                SizedBox(
+                                  height: 32,
+                                  child: TextFormField(
+                                    controller: _birthplaceController,
+                                    readOnly: true,
+                                    onTap: isPreview ? null : _selectPrefecture,
+                                    style: const TextStyle(fontSize: 13),
+                                    decoration: const InputDecoration(
+                                      labelText: '出身地',
+                                      labelStyle: TextStyle(fontSize: 11),
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                      border: OutlineInputBorder(),
+                                      suffixIcon: Icon(Icons.arrow_drop_down, size: 18),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 7,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: Colors.grey),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          padding: const EdgeInsets.all(8),
+                                          child: isPreview
+                                              ? Text('トリビア: ${_triviaController.text}',
+                                                  style: const TextStyle(fontSize: 9),
+                                                  maxLines: 3,
+                                                  overflow: TextOverflow.ellipsis)
+                                              : TextField(
+                                                  controller: _triviaController,
+                                                  maxLines: null,
+                                                  style: const TextStyle(fontSize: 14),
+                                                  decoration: const InputDecoration(
+                                                    labelText: '自分の知ってるトリビアを入力',
+                                                    labelStyle: TextStyle(fontSize: 10),
+                                                    hintText: '豆知識...',
+                                                    border: InputBorder.none,
+                                                    isDense: true,
+                                                  ),
+                                                ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        width: 60,
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue[50],
+                                          border: Border.all(color: Colors.blue),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            isPreview
+                                                ? Text('${_hehController.text}',
+                                                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue))
+                                                : TextField(
+                                                    controller: _hehController,
+                                                    keyboardType: TextInputType.number,
+                                                    textAlign: TextAlign.center,
+                                                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue),
+                                                    decoration: const InputDecoration(
+                                                      border: InputBorder.none,
+                                                      isDense: true,
+                                                      contentPadding: EdgeInsets.zero,
+                                                    ),
+                                                  ),
+                                            const Text('へぇ', style: TextStyle(fontSize: 10, color: Colors.blue)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
