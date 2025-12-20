@@ -6,7 +6,6 @@ import 'package:uuid/uuid.dart';
 
 // ▼ 実際のファイル構成に合わせてimportを確認してください
 import 'screens/home_screen.dart'; 
-import 'screens/screen_information.dart'; 
 import 'screens/screen_birthday.dart'; 
 import 'screens/screen_start.dart';
 
@@ -25,14 +24,20 @@ void main() async {
 
   // ■ ユーザ固有IDを取得 or 初回生成
   String? userId = prefs.getString('user_id');
+  int ver = prefs.getInt('ver') ?? 0;
+
   if (userId == null) {
-    userId = const Uuid().v4(); // UUIDを生成
-    await prefs.setString('user_id', userId); // 保存
+    userId = const Uuid().v4();
+    ver = 0;
+    await prefs.setString('user_id', userId);
+    await prefs.setInt('ver', ver);
   }
   print("User ID: $userId"); // デバッグ用
-
+  print(ver);
+  
   final Map<String, dynamic> baseProfileJson = {
-    "uid": userId,
+     "uid": userId,
+    "ver": ver, // ← これ
   };
 
   // 結果をMyAppに渡してアプリを起動します

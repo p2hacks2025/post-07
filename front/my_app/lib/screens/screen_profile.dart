@@ -35,7 +35,10 @@ class _ScreenProfileState extends State<ScreenProfile> {
 
   final ImagePicker _picker = ImagePicker();
 
-  
+  int _currentVer = 0;
+  int _heyCount = 0;
+
+
 
   @override
   void dispose() {
@@ -48,28 +51,24 @@ class _ScreenProfileState extends State<ScreenProfile> {
     super.dispose();
   }
 
-  @override
+@override
 void initState() {
   super.initState();
 
-  final uid = widget.profileJson['uid'];
+  final uid = widget.profileJson['uid'] as String;
+  _currentVer = widget.profileJson['ver'] ?? 0;
+
   _loadProfileIfExists(uid);
 
-  // 🔍 JSONの中身を確認
-  print('受け取った profileJson: ${widget.profileJson}');
-
-  // uid を読む
- 
-  print('uid: $uid');
-
-  // もし将来データが増えたらここで展開できる
-  _nicknameController.text = widget.profileJson['nickname'] ?? '';
-  _birthdayController.text = widget.profileJson['birthday'] ?? '';
+  _nicknameController.text   = widget.profileJson['nickname'] ?? '';
+  _birthdayController.text   = widget.profileJson['birthday'] ?? '';
   _birthplaceController.text = widget.profileJson['birthplace'] ?? '';
-  _triviaController.text = widget.profileJson['trivia'] ?? '';
-  _heeController.text = (widget.profileJson['hey'] ?? 0).toString();
+  _triviaController.text     = widget.profileJson['trivia'] ?? '';
 
+  _heyCount = widget.profileJson['hey'] ?? 0;
+  _heeController.text = _heyCount.toString(); // ★必ず String に
 }
+
 
 Future<void> _loadProfileIfExists(String uid) async {
   try {
@@ -85,7 +84,7 @@ Future<void> _loadProfileIfExists(String uid) async {
       },
       body: jsonEncode({
         'id': uid,
-        'ver': 0,
+        'ver': _currentVer,
       }),
     );
 
@@ -102,7 +101,7 @@ Future<void> _loadProfileIfExists(String uid) async {
         _birthdayController.text   = data['birthday'] ?? '';
         _birthplaceController.text = data['birthplace'] ?? '';
         _triviaController.text    = data['trivia'] ?? '';
-    
+        _currentVer               = data['ver'] ?? 0;
         _heeController.text       = data['hey'] ?? 0;
 
       });
@@ -266,6 +265,8 @@ Future<void> _loadProfileIfExists(String uid) async {
     print('profileId: ${widget.profileJson['uid']}');
 
     try {
+      final nextVer = _currentVer + 1;
+
       final url = Uri.parse('https://saliently-multiciliated-jacqui.ngrok-free.dev/save_profile');
       final data = {
         'nickname': _nicknameController.text,
@@ -273,7 +274,7 @@ Future<void> _loadProfileIfExists(String uid) async {
         'birthplace': _birthplaceController.text,
         'trivia': _triviaController.text,
         'id': widget.profileJson['uid'],
-        'ver':0,
+        'ver': nextVer,
         'hey':0
       };
 
@@ -292,6 +293,10 @@ Future<void> _loadProfileIfExists(String uid) async {
       if (!mounted) return;
       
       if (response.statusCode == 200) {
+        setState(() {
+          _currentVer = nextVer; // ★ 保存成功後に反映
+        });
+
         final profile = Profile(
           profileId: _profileService.generateProfileId(),
           nickname: _nicknameController.text,
