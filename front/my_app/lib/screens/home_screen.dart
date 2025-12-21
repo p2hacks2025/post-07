@@ -117,6 +117,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       'color': Colors.cyan.shade100,
       'icon': Icons.face_2
     },
+    {
+      'nickname': 'やす',
+      'birthday': '11月23日',
+      'birthplace': '東京',
+      'trivia': 'ペンギンは熱帯にもいる',
+      'color': const Color.fromARGB(255, 238, 82, 82),
+      'icon': Icons.face
+    },
   ];
 
   @override

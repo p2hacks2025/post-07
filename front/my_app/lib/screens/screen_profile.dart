@@ -382,28 +382,30 @@ class _ScreenProfileState extends State<ScreenProfile> {
   Widget _buildTriviaAndHeh(bool isPreview) {
     return Row(
       children: [
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(4)),
-            padding: const EdgeInsets.all(4),
-            child: isPreview
-                ? Text('トリビア: ${_triviaController.text}',
-                    style: const TextStyle(fontSize: 9),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis)
-                : TextField(
-                    controller: _triviaController,
-                    maxLines: null,
-                    decoration: const InputDecoration(
-                        hintText: 'トリビア',
-                        border: InputBorder.none,
-                        isDense: true),
-                    style: const TextStyle(fontSize: 10),
-                  ),
+          Expanded(
+            child: Container(
+              height: 120, // 高さを指定
+              decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(4)),
+              padding: const EdgeInsets.all(4),
+              child: isPreview
+                  ? Text('トリビア: ${_triviaController.text}',
+                      style: const TextStyle(fontSize: 9),
+                      maxLines: 6,
+                      overflow: TextOverflow.ellipsis)
+                  : TextField(
+                      controller: _triviaController,
+                      maxLines: null,
+                      minLines: 6, // 最小行数を指定
+                      decoration: const InputDecoration(
+                          hintText: 'トリビア',
+                          border: InputBorder.none,
+                          isDense: true),
+                      style: const TextStyle(fontSize: 10),
+                    ),
+            ),
           ),
-        ),
         const SizedBox(width: 4),
         Container(
           width: 38,
@@ -637,8 +639,6 @@ class _ScreenProfileState extends State<ScreenProfile> {
 
   @override
   Widget build(BuildContext context) {
-    final double cardWidth = MediaQuery.of(context).size.width * 0.68;
-
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -657,47 +657,113 @@ class _ScreenProfileState extends State<ScreenProfile> {
             ),
           ],
         ),
-        // ★修正: 画面全体をスクロール可能にする
-        body: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start, // 上寄せ配置
-              children: [
-                // 編集中のカード
-                SizedBox(width: cardWidth, child: _buildCardBase(isPreview: false)),
-                const SizedBox(width: 10),
-                // 右側のボタン
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.start, // 上寄せ
-                  children: [
-                    _buildSideButton(
-                        label: 'カードを見る',
-                        icon: Icons.visibility,
-                        onPressed: _showCardPreview,
-                        color: Colors.blue),
-                    const SizedBox(height: 8),
-                    _buildSideButton(
-                        label: '登録',
-                        icon: Icons.check,
-                        onPressed: _saveProfile,
-                        color: Colors.green),
-                    const SizedBox(height: 8),
-                    _buildSideButton(
-                        label: '戻る',
-                        icon: Icons.arrow_back,
-                        onPressed: () => Navigator.pop(context),
-                        color: Colors.grey,
-                        isOutlined: true),
-                  ],
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth >= 1200) {
+              // デスクトップ
+              return SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  child: _buildDesktopLayout(constraints.maxWidth),
                 ),
-              ],
-            ),
-          ),
+              );
+            } else if (constraints.maxWidth >= 700) {
+              // タブレット
+              return SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  child: _buildTabletLayout(constraints.maxWidth),
+                ),
+              );
+            } else {
+              // スマホ
+              return SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  child: _buildMobileLayout(),
+                ),
+              );
+            }
+          },
         ),
       ),
     );
+  }
+
+
+  // --- レイアウト切り替え用Widget ---
+  Widget _buildDesktopLayout(double maxWidth) {
+    final double cardWidth = maxWidth * 0.68;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(width: cardWidth, child: _buildCardBase(isPreview: false)),
+        const SizedBox(width: 10),
+        Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: _buildSideButtons(isWide: true),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabletLayout(double maxWidth) {
+    final double cardWidth = maxWidth * 0.9;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(width: cardWidth, child: _buildCardBase(isPreview: false)),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: _buildSideButtons(isWide: false),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileLayout() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildCardBase(isPreview: false),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: _buildSideButtons(isWide: false),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildSideButtons({required bool isWide}) {
+    final List<Widget> buttons = [
+      _buildSideButton(
+        label: 'カードを見る',
+        icon: Icons.visibility,
+        onPressed: _showCardPreview,
+        color: Colors.blue,
+      ),
+      isWide ? const SizedBox(height: 8) : const SizedBox(width: 8),
+      _buildSideButton(
+        label: '登録',
+        icon: Icons.check,
+        onPressed: _saveProfile,
+        color: Colors.green,
+      ),
+      isWide ? const SizedBox(height: 8) : const SizedBox(width: 8),
+      _buildSideButton(
+        label: '戻る',
+        icon: Icons.arrow_back,
+        onPressed: () => Navigator.pop(context),
+        color: Colors.grey,
+        isOutlined: true,
+      ),
+    ];
+    return buttons;
   }
 
   Widget _buildSideButton(
